@@ -1,3 +1,5 @@
+'use client';
+
 import React from "react";
 import type {Metadata} from "next";
 import "./globals.css";
@@ -13,10 +15,10 @@ export default function RootLayout({children}: Readonly<{
 }>) {
   return (
     <html lang="en">
-      <body>
-        <NavBar/>
-        <main>{children}</main>
-      </body>
+    <body className="w-screen h-screen overflow-y-scroll">
+    <NavBar/>
+    <main>{children}</main>
+    </body>
     </html>
   );
 }
