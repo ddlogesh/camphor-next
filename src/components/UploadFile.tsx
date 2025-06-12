@@ -14,6 +14,10 @@ type FileInfo = {
   extension: string;
 };
 
+type UploadFileProps = {
+  onNext: () => void;
+}
+
 const SUPPORTED_MIME_TYPES: { [key: string]: string } = {
   'csv': 'text/csv',
   'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -35,7 +39,7 @@ const ErrorMessages: { [key: string]: string } = {
   [ErrorCode.TooManyFiles]: `Please upload a single file at once`,
 };
 
-const UploadFile: React.FC = () => {
+const UploadFile: React.FC<UploadFileProps> = ({onNext}) => {
   const [fileInfo, setFileInfo] = useState<FileInfo | null>(null);
   const [error, setError] = useState<string>('');
 
