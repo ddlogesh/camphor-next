@@ -1,11 +1,9 @@
-'use client';
-
-import Layout from '@/src/components/Layout';
+import RootLayout from "@/src/app/Layout";
 
 export default function Home() {
   return (
-    <Layout>
+    <RootLayout>
       <div>Camphor</div>
-    </Layout>
+    </RootLayout>
   );
 }

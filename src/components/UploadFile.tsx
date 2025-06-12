@@ -1,19 +1,17 @@
+'use client';
+
 import React, {useCallback, useState} from 'react';
 import {useRouter} from 'next/router';
 import {ErrorCode, FileRejection, useDropzone} from 'react-dropzone';
 import {partial} from 'filesize';
 import _ from 'lodash';
 import appConfig from "@/src/app/config";
-import {toPlural} from "@/src/app/util";
+import {parseJSON, toPlural} from "@/src/lib/util";
 
 type FileInfo = {
   name: string;
   size: string;
   extension: string;
-};
-
-type FileUploaderProps = {
-  onNext: () => void;
 };
 
 const SUPPORTED_MIME_TYPES: { [key: string]: string } = {
@@ -23,17 +21,21 @@ const SUPPORTED_MIME_TYPES: { [key: string]: string } = {
   'json': 'application/json',
 };
 
-const FILE_EXTENSIONS = appConfig.FILE_EXTENSIONS || Object.keys(SUPPORTED_MIME_TYPES);
-const fileExtensionText = FILE_EXTENSIONS.map((ext) => `.${ext}`).join(', ');
-const MAX_FILE_SIZE_MB = appConfig.MAX_FILE_SIZE_MB || 50;
+const FILE_EXTENSIONS: string[] = appConfig.FILE_EXTENSIONS ||
+  (process.env.NEXT_PUBLIC_FILE_EXTENSIONS && parseJSON(process.env.NEXT_PUBLIC_FILE_EXTENSIONS)) ||
+  Object.keys(SUPPORTED_MIME_TYPES);
+const fileExtensionText: string = FILE_EXTENSIONS.map((ext) => `.${ext}`).join(', ');
+const MAX_FILE_SIZE_MB: number = appConfig.MAX_FILE_SIZE_MB ||
+  (process.env.NEXT_PUBLIC_MAX_FILE_SIZE_MB && parseInt(process.env.NEXT_PUBLIC_MAX_FILE_SIZE_MB)) ||
+  50;
 const fileSize = partial({standard: 'jedec'});
-const ErrorMessages = {
+const ErrorMessages: { [key: string]: string } = {
   [ErrorCode.FileInvalidType]: `Please upload a valid file. Supported file ${toPlural('format', FILE_EXTENSIONS.length)}: ${fileExtensionText}`,
   [ErrorCode.FileTooLarge]: `File size is too large. Max file size is ${MAX_FILE_SIZE_MB} MB`,
   [ErrorCode.TooManyFiles]: `Please upload a single file at once`,
 };
 
-const FileUploader: React.FC<FileUploaderProps> = () => {
+const UploadFile: React.FC = () => {
   const [fileInfo, setFileInfo] = useState<FileInfo | null>(null);
   const [error, setError] = useState<string>('');
 
@@ -134,4 +136,4 @@ const FileUploader: React.FC<FileUploaderProps> = () => {
   );
 };
 
-export default FileUploader;
+export default UploadFile;
