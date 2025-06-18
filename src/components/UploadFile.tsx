@@ -3,10 +3,24 @@
 import React, {useCallback, useState} from 'react';
 import {useRouter} from 'next/router';
 import {ErrorCode, FileRejection, useDropzone} from 'react-dropzone';
+import {
+  DownloadIcon,
+  ChevronDownIcon,
+} from "lucide-react"
+
+import {Button} from "@/src/components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/src/components/ui/dropdown-menu"
 import {partial} from 'filesize';
 import _ from 'lodash';
+import * as XLSX from 'xlsx';
 import appConfig from "@/src/app/config";
-import {parseJSON, toPlural} from "@/src/lib/util";
+import {parseJSON, toPlural} from "@/src/lib/utils";
+import {fetchSampleData} from "@/src/lib/fakedata";
 
 type FileInfo = {
   name: string;
@@ -51,6 +65,21 @@ const UploadFile: React.FC<UploadFileProps> = ({onNext}) => {
     setError('');
     setFileInfo(null);
   }
+
+  const downloadCsv = () => {
+    const importConfig = appConfig.imports[0];
+    const sampleData = fetchSampleData(importConfig);
+    const worksheet = XLSX.utils.json_to_sheet(sampleData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, importConfig.label);
+    XLSX.writeFile(workbook, `${importConfig.id}-sample.csv`, { bookType: 'csv' });
+    // TODO: object and array data is missing in CSV file
+  }
+
+  const downloadExcel = () => {
+
+  }
+
   const acceptFileFormats = () => {
     let result: { [key: string]: string[] } = {};
     FILE_EXTENSIONS.forEach((extension) => {
@@ -98,6 +127,31 @@ const UploadFile: React.FC<UploadFileProps> = ({onNext}) => {
       <p className="text-sm text-gray-600">
         Add your documents here
       </p>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="outline" className="mt-4">
+            <DownloadIcon
+              className="opacity-60"
+              size={16}
+              aria-hidden="true"
+            />
+            Sample File
+            <ChevronDownIcon
+              className="opacity-60"
+              size={16}
+              aria-hidden="true"
+            />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent>
+          <DropdownMenuItem onClick={downloadCsv}>
+            CSV File
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={downloadExcel}>
+            Excel File
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
       <div
         {...getRootProps()}
         className={`w-full max-w-2xl h-64 mt-4 border-4 border-dashed rounded-lg flex items-center justify-center cursor-pointer 
@@ -122,9 +176,11 @@ const UploadFile: React.FC<UploadFileProps> = ({onNext}) => {
         <div className="mt-6 p-4 bg-white rounded shadow w-full max-w-md relative">
           <p className="text-gray-600">{fileInfo.name} ({fileInfo.size})</p>
           <span className="absolute top-0 bottom-0 right-0 px-3 py-4">
-            <svg className="fill-current h-6 w-6 text-red-500 cursor-pointer" role="button" viewBox="0 0 20 20" onClick={removeFile}>
+            <svg className="fill-current h-6 w-6 text-red-500 cursor-pointer" role="button" viewBox="0 0 20 20"
+                 onClick={removeFile}>
               <title>Close</title>
-              <path d="M14.348 14.849a1.2 1.2 0 0 1-1.697 0L10 11.819l-2.651 3.029a1.2 1.2 0 1 1-1.697-1.697l2.758-3.15-2.759-3.152a1.2 1.2 0 1 1 1.697-1.697L10 8.183l2.651-3.031a1.2 1.2 0 1 1 1.697 1.697l-2.758 3.152 2.758 3.15a1.2 1.2 0 0 1 0 1.698z"/>
+              <path
+                d="M14.348 14.849a1.2 1.2 0 0 1-1.697 0L10 11.819l-2.651 3.029a1.2 1.2 0 1 1-1.697-1.697l2.758-3.15-2.759-3.152a1.2 1.2 0 1 1 1.697-1.697L10 8.183l2.651-3.031a1.2 1.2 0 1 1 1.697 1.697l-2.758 3.152 2.758 3.15a1.2 1.2 0 0 1 0 1.698z"/>
             </svg>
           </span>
         </div>
