@@ -1,21 +1,8 @@
 import moment from 'moment';
 import {faker} from '@faker-js/faker';
+import {ImportConfig, ImportField, ImportFieldOptions} from "@/src/types/import-config";
 
-type ImportField = {
-  id: string;
-  type: string;
-  format?: string;
-  enum?: { id: string; label: string }[];
-  required?: boolean;
-  unique?: boolean;
-  min?: number;
-  max?: number;
-  fixed?: number;
-  length?: number;
-  fields?: ImportField[];
-};
-
-const generateFieldValue = (field: ImportField): any => {
+const generateFieldValue = (field: ImportField, options: ImportFieldOptions): any => {
   const {
     type,
     format,
@@ -91,38 +78,40 @@ const generateFieldValue = (field: ImportField): any => {
       return faker.helpers.arrayElement(enumValues?.map((e) => e.id) || []);
 
     case 'array':
-      return Array.from({ length: 3 }).map(() => {
+      const data = Array.from({ length: 3 }).map(() => {
         const row: any = {};
 
         for (const field of fields || []) {
-          row[field.id] = generateFieldValue(field);
+          row[field.id] = generateFieldValue(field, options);
         }
 
         return row;
       });
 
+      return options.serializeObject ? JSON.stringify(data) : data;
+
     case 'object':
       const nested: any = {};
 
       for (const nestedField of fields || []) {
-        nested[nestedField.id] = generateFieldValue(nestedField);
+        nested[nestedField.id] = generateFieldValue(nestedField, options);
       }
 
-      return nested;
+      return options.serializeObject ? JSON.stringify(nested) : nested;
 
     default:
       return null;
   }
 }
 
-const fetchSampleData = (importConfig: { id?: string; name?: string; fields: ImportField[]; }) => {
+const fetchSampleData = (importConfig: ImportConfig, options: ImportFieldOptions = {}) => {
   const data: any[] = [];
 
   for (let i = 0; i < 5; i++) {
     const row: any = {};
 
     for (const field of importConfig.fields || []) {
-      row[field.id] = generateFieldValue(field);
+      row[field.id] = generateFieldValue(field, options);
     }
     data.push(row);
   }

@@ -1,5 +1,5 @@
 const appConfig = {
-  FILE_EXTENSIONS: ['csv', 'xls', 'xlsx'],
+  FILE_EXTENSIONS: ['csv', 'xlsx', 'json'],
   MAX_FILE_SIZE_MB: 2,
   imports: [
     {

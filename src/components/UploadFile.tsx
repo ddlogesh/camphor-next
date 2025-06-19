@@ -16,11 +16,13 @@ import {
   DropdownMenuTrigger,
 } from "@/src/components/ui/dropdown-menu"
 import {partial} from 'filesize';
+import {saveAs} from 'file-saver';
 import _ from 'lodash';
 import * as XLSX from 'xlsx';
 import appConfig from "@/src/app/config";
 import {parseJSON, toPlural} from "@/src/lib/utils";
 import {fetchSampleData} from "@/src/lib/fakedata";
+import {ImportConfig} from "@/src/types/import-config";
 
 type FileInfo = {
   name: string;
@@ -66,18 +68,32 @@ const UploadFile: React.FC<UploadFileProps> = ({onNext}) => {
     setFileInfo(null);
   }
 
-  const downloadCsv = () => {
-    const importConfig = appConfig.imports[0];
-    const sampleData = fetchSampleData(importConfig);
-    const worksheet = XLSX.utils.json_to_sheet(sampleData);
+  const exportFile = (fileFormat: string) => {
+    const importConfig: ImportConfig = appConfig.imports[0];
+    const data = fetchSampleData(importConfig, {serializeObject: true});
+    const worksheet = XLSX.utils.json_to_sheet(data);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, importConfig.label);
-    XLSX.writeFile(workbook, `${importConfig.id}-sample.csv`, { bookType: 'csv' });
-    // TODO: object and array data is missing in CSV file
+
+    const bookType: XLSX.BookType = fileFormat as XLSX.BookType;
+    const fileName = `${importConfig.id}-sample.${fileFormat}`;
+    XLSX.writeFile(workbook, fileName, {bookType, type: 'file'});
   }
 
-  const downloadExcel = () => {
+  const exportCSV = () => {
+    exportFile('csv');
+  }
 
+  const exportXLSX = () => {
+    exportFile('xlsx');
+  }
+
+  const exportJSON = () => {
+    const importConfig: ImportConfig = appConfig.imports[0];
+    const data = fetchSampleData(importConfig);
+    const jsonString = JSON.stringify(data, null, 2);
+    const blob = new Blob([jsonString], {type: 'application/json;charset=utf-8;'});
+    saveAs(blob, `${importConfig.id}-sample.json`);
   }
 
   const acceptFileFormats = () => {
@@ -144,12 +160,21 @@ const UploadFile: React.FC<UploadFileProps> = ({onNext}) => {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent>
-          <DropdownMenuItem onClick={downloadCsv}>
-            CSV File
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={downloadExcel}>
-            Excel File
-          </DropdownMenuItem>
+          {FILE_EXTENSIONS.includes('json') &&
+              <DropdownMenuItem onClick={exportJSON}>
+                  JSON File
+              </DropdownMenuItem>
+          }
+          {FILE_EXTENSIONS.includes('csv') &&
+              <DropdownMenuItem onClick={exportCSV}>
+                  CSV File
+              </DropdownMenuItem>
+          }
+          {FILE_EXTENSIONS.includes('xlsx') &&
+              <DropdownMenuItem onClick={exportXLSX}>
+                  Excel File
+              </DropdownMenuItem>
+          }
         </DropdownMenuContent>
       </DropdownMenu>
       <div
