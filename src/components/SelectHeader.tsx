@@ -2,20 +2,21 @@
 
 import React, {useState} from "react";
 import * as XLSX from 'xlsx';
+import {FileInfo} from "@/src/types/file-info";
 
 type SelectHeaderProps = {
   onNext: () => void;
   onBack: () => void;
-  file: File | undefined;
+  importFileInfo: FileInfo | null;
 };
 
-const SelectHeader: React.FC<SelectHeaderProps> = ({ file }) => {
-  if (file == undefined) {
+const SelectHeader: React.FC<SelectHeaderProps> = ({ onNext, onBack, importFileInfo }) => {
+  if (importFileInfo == null) {
+    onBack();
     return;
   }
 
   const [worksheets, setWorksheets] = useState<string[]>([]);
-  const ext = file.name.split('.').pop()?.toLowerCase();
   const reader = new FileReader();
 
   reader.onload = (e) => {
@@ -26,7 +27,7 @@ const SelectHeader: React.FC<SelectHeaderProps> = ({ file }) => {
     }
 
     try {
-      if (ext === 'json') {
+      if (importFileInfo.extension === 'json') {
         JSON.parse(result as string);
       } else {
         const workbook = XLSX.read(result, {type: 'binary'});
@@ -38,10 +39,10 @@ const SelectHeader: React.FC<SelectHeaderProps> = ({ file }) => {
     }
   };
 
-  if (ext === 'json') {
-    reader.readAsText(file);
+  if (importFileInfo.extension === 'json') {
+    reader.readAsText(importFileInfo.file);
   } else {
-    reader.readAsArrayBuffer(file);
+    reader.readAsArrayBuffer(importFileInfo.file);
   }
 
   return (
@@ -54,16 +55,14 @@ const SelectHeader: React.FC<SelectHeaderProps> = ({ file }) => {
       </p>
       <div className="flex flex-row items-center mt-6 disabled:opacity-50">
         <button
-          className=" px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-          // onClick={handleClick}
-          // disabled={!fileInfo}
+          className="px-6 py-2 mr-4 bg-blue-600 text-white rounded hover:bg-blue-700"
+          onClick={onBack}
         >
           Back
         </button>
         <button
           className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-          // onClick={handleClick}
-          // disabled={!fileInfo}
+          onClick={onNext}
         >
           Next
         </button>

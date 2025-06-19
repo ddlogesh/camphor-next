@@ -1,7 +1,6 @@
 'use client';
 
 import React, {useCallback, useState} from 'react';
-import {useRouter} from 'next/router';
 import {ErrorCode, FileRejection, useDropzone} from 'react-dropzone';
 import {
   DownloadIcon,
@@ -23,16 +22,7 @@ import appConfig from "@/src/app/config";
 import {parseJSON, toPlural} from "@/src/lib/utils";
 import {fetchSampleData} from "@/src/lib/fakedata";
 import {ImportConfig} from "@/src/types/import-config";
-
-type FileInfo = {
-  name: string;
-  size: string;
-  extension: string;
-};
-
-type UploadFileProps = {
-  onNext: () => void;
-}
+import {FileInfo} from "@/src/types/file-info";
 
 const SUPPORTED_MIME_TYPES: { [key: string]: string } = {
   'csv': 'text/csv',
@@ -41,32 +31,35 @@ const SUPPORTED_MIME_TYPES: { [key: string]: string } = {
   'json': 'application/json',
 };
 
-const FILE_EXTENSIONS: string[] = appConfig.FILE_EXTENSIONS ||
+const FileExtensions: string[] = appConfig.fileExtensions ||
   (process.env.NEXT_PUBLIC_FILE_EXTENSIONS && parseJSON(process.env.NEXT_PUBLIC_FILE_EXTENSIONS)) ||
   Object.keys(SUPPORTED_MIME_TYPES);
-const fileExtensionText: string = FILE_EXTENSIONS.map((ext) => `.${ext}`).join(', ');
-const MAX_FILE_SIZE_MB: number = appConfig.MAX_FILE_SIZE_MB ||
+const fileExtensionText: string = FileExtensions.map((ext) => `.${ext}`).join(', ');
+const MaxFileSizeMB: number = appConfig.maxFileSizeMB ||
   (process.env.NEXT_PUBLIC_MAX_FILE_SIZE_MB && parseInt(process.env.NEXT_PUBLIC_MAX_FILE_SIZE_MB)) ||
   50;
 const fileSize = partial({standard: 'jedec'});
 const ErrorMessages: { [key: string]: string } = {
-  [ErrorCode.FileInvalidType]: `Please upload a valid file. Supported file ${toPlural('format', FILE_EXTENSIONS.length)}: ${fileExtensionText}`,
-  [ErrorCode.FileTooLarge]: `File size is too large. Max file size is ${MAX_FILE_SIZE_MB} MB`,
+  [ErrorCode.FileInvalidType]: `Please upload a valid file. Supported file ${toPlural('format', FileExtensions.length)}: ${fileExtensionText}`,
+  [ErrorCode.FileTooLarge]: `File size is too large. Max file size is ${MaxFileSizeMB} MB`,
   [ErrorCode.TooManyFiles]: `Please upload a single file at once`,
 };
 
-const UploadFile: React.FC<UploadFileProps> = ({onNext}) => {
-  const [fileInfo, setFileInfo] = useState<FileInfo | null>(null);
+type UploadFileProps = {
+  onNext: () => void;
+  importFileInfo: FileInfo | null;
+  setImportFileInfo: (fileInfo: FileInfo | null) => void;
+}
+
+const UploadFile: React.FC<UploadFileProps> = ({onNext, importFileInfo, setImportFileInfo}) => {
   const [error, setError] = useState<string>('');
 
-  const router = useRouter();
-  const handleClick = () => {
-    router.push('/select-header');
-  }
   const removeFile = () => {
     setError('');
-    setFileInfo(null);
+    setImportFileInfo(null);
   }
+
+  /* Export file as CSV, Excel or JSON */
 
   const exportFile = (fileFormat: string) => {
     const importConfig: ImportConfig = appConfig.imports[0];
@@ -96,9 +89,11 @@ const UploadFile: React.FC<UploadFileProps> = ({onNext}) => {
     saveAs(blob, `${importConfig.id}-sample.json`);
   }
 
+  /* Accept file via react-dropzone */
+
   const acceptFileFormats = () => {
     let result: { [key: string]: string[] } = {};
-    FILE_EXTENSIONS.forEach((extension) => {
+    FileExtensions.forEach((extension) => {
       result[SUPPORTED_MIME_TYPES[extension]] = [`.${extension}`]
     });
     return result;
@@ -106,7 +101,7 @@ const UploadFile: React.FC<UploadFileProps> = ({onNext}) => {
 
   const onDrop = useCallback((acceptedFiles: File[], fileRejections: FileRejection[]) => {
     setError('');
-    setFileInfo(null);
+    setImportFileInfo(null);
 
     if (fileRejections.length > 0) {
       const error = fileRejections[0].errors[0];
@@ -116,10 +111,11 @@ const UploadFile: React.FC<UploadFileProps> = ({onNext}) => {
 
     const file = acceptedFiles[0];
     const ext = file.name.split('.').pop()?.toLowerCase();
-    setFileInfo({
+    setImportFileInfo({
       name: file.name,
       size: fileSize(file.size),
       extension: ext || 'binary',
+      file,
     });
   }, []);
 
@@ -131,7 +127,7 @@ const UploadFile: React.FC<UploadFileProps> = ({onNext}) => {
     onDrop,
     multiple: false,
     maxFiles: 1,
-    maxSize: MAX_FILE_SIZE_MB * 1024 * 1024,
+    maxSize: MaxFileSizeMB * 1024 * 1024,
     accept: acceptFileFormats(),
   });
 
@@ -160,17 +156,17 @@ const UploadFile: React.FC<UploadFileProps> = ({onNext}) => {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent>
-          {FILE_EXTENSIONS.includes('json') &&
+          {FileExtensions.includes('json') &&
               <DropdownMenuItem onClick={exportJSON}>
                   JSON File
               </DropdownMenuItem>
           }
-          {FILE_EXTENSIONS.includes('csv') &&
+          {FileExtensions.includes('csv') &&
               <DropdownMenuItem onClick={exportCSV}>
                   CSV File
               </DropdownMenuItem>
           }
-          {FILE_EXTENSIONS.includes('xlsx') &&
+          {FileExtensions.includes('xlsx') &&
               <DropdownMenuItem onClick={exportXLSX}>
                   Excel File
               </DropdownMenuItem>
@@ -189,17 +185,17 @@ const UploadFile: React.FC<UploadFileProps> = ({onNext}) => {
             ? <p className="text-blue-700 text-lg">Drop the file here...</p>
             : <div className="flex flex-col items-center">
               <p className="text-gray-500 text-sm">Click to upload or drag and drop</p>
-              <p className="text-gray-500 text-sm">Max {MAX_FILE_SIZE_MB} MB file is allowed</p>
+              <p className="text-gray-500 text-sm">Max {MaxFileSizeMB} MB file is allowed</p>
             </div>
         }
       </div>
-      <p className="mt-2 text-gray-500 text-sm">Only supports {fileExtensionText} {toPlural('file', FILE_EXTENSIONS.length)}</p>
+      <p className="mt-2 text-gray-500 text-sm">Only supports {fileExtensionText} {toPlural('file', FileExtensions.length)}</p>
 
       {error && <p className="mt-6 text-red-600">{error}</p>}
 
-      {fileInfo && (
+      {importFileInfo && (
         <div className="mt-6 p-4 bg-white rounded shadow w-full max-w-md relative">
-          <p className="text-gray-600">{fileInfo.name} ({fileInfo.size})</p>
+          <p className="text-gray-600">{importFileInfo.name} ({importFileInfo.size})</p>
           <span className="absolute top-0 bottom-0 right-0 px-3 py-4">
             <svg className="fill-current h-6 w-6 text-red-500 cursor-pointer" role="button" viewBox="0 0 20 20"
                  onClick={removeFile}>
@@ -213,8 +209,8 @@ const UploadFile: React.FC<UploadFileProps> = ({onNext}) => {
 
       <button
         className="mt-6 px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
-        onClick={handleClick}
-        disabled={!fileInfo}
+        onClick={onNext}
+        disabled={!importFileInfo}
       >
         Next
       </button>
