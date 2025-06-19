@@ -1,7 +1,6 @@
 'use client';
 
-import React, {useState} from "react";
-import * as XLSX from 'xlsx';
+import React from "react";
 import {FileInfo} from "@/src/types/file-info";
 
 type SelectHeaderProps = {
@@ -14,35 +13,6 @@ const SelectHeader: React.FC<SelectHeaderProps> = ({ onNext, onBack, importFileI
   if (importFileInfo == null) {
     onBack();
     return;
-  }
-
-  const [worksheets, setWorksheets] = useState<string[]>([]);
-  const reader = new FileReader();
-
-  reader.onload = (e) => {
-    const result = e.target?.result;
-    if (!result) {
-      console.error('Failed to read file.');
-      return;
-    }
-
-    try {
-      if (importFileInfo.extension === 'json') {
-        JSON.parse(result as string);
-      } else {
-        const workbook = XLSX.read(result, {type: 'binary'});
-        console.log(workbook.SheetNames);
-        XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
-      }
-    } catch (err) {
-      console.error('Invalid file content.');
-    }
-  };
-
-  if (importFileInfo.extension === 'json') {
-    reader.readAsText(importFileInfo.file);
-  } else {
-    reader.readAsArrayBuffer(importFileInfo.file);
   }
 
   return (
