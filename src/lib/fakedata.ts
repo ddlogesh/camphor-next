@@ -77,19 +77,6 @@ const generateFieldValue = (field: ImportField, options: ImportFieldOptions): an
     case 'select':
       return faker.helpers.arrayElement(enumValues?.map((e) => e.id) || []);
 
-    case 'array':
-      const data = Array.from({ length: 3 }).map(() => {
-        const row: any = {};
-
-        for (const field of fields || []) {
-          row[field.id] = generateFieldValue(field, options);
-        }
-
-        return row;
-      });
-
-      return options.serializeObject ? JSON.stringify(data) : data;
-
     case 'object':
       const nested: any = {};
 
@@ -97,7 +84,7 @@ const generateFieldValue = (field: ImportField, options: ImportFieldOptions): an
         nested[nestedField.id] = generateFieldValue(nestedField, options);
       }
 
-      return options.serializeObject ? JSON.stringify(nested) : nested;
+      return nested;
 
     default:
       return null;
@@ -111,7 +98,17 @@ const fetchSampleData = (importConfig: ImportConfig, options: ImportFieldOptions
     const row: any = {};
 
     for (const field of importConfig.fields || []) {
-      row[field.id] = generateFieldValue(field, options);
+      if (field.multi) {
+        row[field.id] = Array.from({ length: 3 }).map(() => {
+          return generateFieldValue(field, options);
+        });
+      } else {
+        row[field.id] = generateFieldValue(field, options);
+      }
+
+      if (options.serializeObject && (field.multi || field.type === 'object')) {
+        row[field.id] = JSON.stringify(row[field.id]);
+      }
     }
     data.push(row);
   }

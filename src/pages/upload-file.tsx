@@ -15,10 +15,17 @@ export default function UploadFilePage() {
   const nextStep = () => {
     switch (stage) {
       case 'upload':
+        // TODO: Redirect to validate stage if headers already present in CSV (or) first worksheet of Excel file
         setStage('header');
         break;
       case 'header':
         setStage('map');
+        break;
+      case 'map':
+        setStage('validate');
+        break;
+      case 'validate':
+        setStage('submit');
         break;
       default:
         setStage('upload');
