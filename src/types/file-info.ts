@@ -3,4 +3,6 @@ export type FileInfo = {
   size: string;
   extension: string;
   file: File;
+  worksheets?: string[];
+  worksheet?: string;
 };

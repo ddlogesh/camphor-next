@@ -61,6 +61,7 @@ export default function UploadFilePage() {
           onNext={nextStep}
           onBack={backStep}
           importFileInfo={importFileInfo}
+          setImportFileInfo={setImportFileInfo}
         />
       )}
     </RootLayout>

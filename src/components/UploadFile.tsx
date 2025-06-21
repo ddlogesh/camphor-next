@@ -23,6 +23,7 @@ import {parseJSON, toPlural} from "@/src/lib/utils";
 import {fetchSampleData} from "@/src/lib/fakedata";
 import {ImportConfig} from "@/src/types/import-config";
 import {FileInfo} from "@/src/types/file-info";
+import {getWorksheetNames} from "@/src/lib/sheet";
 
 const SUPPORTED_MIME_TYPES: { [key: string]: string } = {
   'csv': 'text/csv',
@@ -99,7 +100,7 @@ const UploadFile: React.FC<UploadFileProps> = ({onNext, importFileInfo, setImpor
     return result;
   };
 
-  const onDrop = useCallback((acceptedFiles: File[], fileRejections: FileRejection[]) => {
+  const onDrop = useCallback(async (acceptedFiles: File[], fileRejections: FileRejection[]) => {
     setError('');
     setImportFileInfo(null);
 
@@ -111,12 +112,19 @@ const UploadFile: React.FC<UploadFileProps> = ({onNext, importFileInfo, setImpor
 
     const file = acceptedFiles[0];
     const ext = file.name.split('.').pop()?.toLowerCase();
-    setImportFileInfo({
+    const fileInfo: FileInfo = {
       name: file.name,
       size: fileSize(file.size),
       extension: ext || 'binary',
       file,
-    });
+    }
+    if (ext === 'xlsx') {
+      const worksheets = await getWorksheetNames(file);
+      fileInfo.worksheets = worksheets;
+      fileInfo.worksheet = worksheets[0];
+    }
+    // TODO: Auto-select the header row if it's a first row.
+    setImportFileInfo(fileInfo);
   }, []);
 
   const {
