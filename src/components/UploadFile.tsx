@@ -28,7 +28,6 @@ import {getWorksheetNames} from "@/src/lib/sheet";
 const SUPPORTED_MIME_TYPES: { [key: string]: string } = {
   'csv': 'text/csv',
   'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-  'xls': 'application/vnd.ms-excel',
   'json': 'application/json',
 };
 
