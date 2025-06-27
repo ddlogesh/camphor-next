@@ -1,28 +1,25 @@
-import * as XLSX from 'xlsx';
+import pako from 'pako';
 
-const getWorksheetNames = async (file: File): Promise<string[]> => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
+const loadWasm = async (): Promise<void> => {
+  if (window.calc?.loaded)
+    return;
 
-    reader.onload = (e) => {
-      try {
-        const data = new Uint8Array(e.target?.result as ArrayBuffer);
-        const workbook = XLSX.read(data, { type: 'array' });
-        const sheetNames = workbook.SheetNames;
-        resolve(sheetNames);
-      } catch (error) {
-        reject(`Error reading file: ${error}`);
-      }
-    };
-
-    reader.onerror = () => {
-      reject('Error reading file');
-    };
-
-    reader.readAsArrayBuffer(file);
-  });
+  console.log('Loading Wasm...');
+  const go = new window.Go();
+  const wasmResponse = await fetch('/wasm/excel.wasm.gz');
+  const wasmBytes = pako.ungzip(await wasmResponse.arrayBuffer());
+  const { instance } = await WebAssembly.instantiate(wasmBytes, go.importObject);
+  go.run(instance);
+  console.log('Wasm is initialized!');
 };
 
-export {
-  getWorksheetNames,
+const getWorksheetNames = async (file: File): Promise<string[]> => {
+  const res = window.calc.goSubtract(10, 3);
+  console.log(res);
+  return [res.toString()];
 }
+
+export {
+  loadWasm,
+  getWorksheetNames,
+};
