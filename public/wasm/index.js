@@ -1,17 +1,3 @@
-if (typeof globalThis.navigator === 'undefined') {
-  !globalThis.crypto && (globalThis.crypto = {
-    async getRandomValues(b) {
-      const { randomFillSync } = await import('crypto');
-      randomFillSync(b);
-    }
-  });
-  !globalThis.performance && (globalThis.performance = {
-    now() {
-      const [sec, nsec] = process.hrtime();
-      return sec * 1000 + nsec / 1000000;
-    }
-  });
-}
 (() => {
   const enosys = () => {
     const err = new Error("not implemented");
@@ -106,11 +92,21 @@ if (typeof globalThis.navigator === 'undefined') {
   }
 
   if (!globalThis.crypto) {
-    throw new Error("globalThis.crypto is not available, polyfill required (crypto.getRandomValues only)");
+    globalThis.crypto = {
+      async getRandomValues(b) {
+        const { randomFillSync } = await import('crypto');
+        randomFillSync(b);
+      },
+    }
   }
 
   if (!globalThis.performance) {
-    throw new Error("globalThis.performance is not available, polyfill required (performance.now only)");
+    globalThis.performance = {
+      now() {
+        const [sec, nsec] = process.hrtime();
+        return sec * 1000 + nsec / 1000000;
+      },
+    }
   }
 
   if (!globalThis.TextEncoder) {
@@ -597,22 +593,3 @@ if (typeof globalThis.navigator === 'undefined') {
     }
   }
 })();
-
-import pako from 'pako';
-
-export async function init(wasmPath) {
-  const go = new Go();
-  let buffer;
-  globalThis.excelize = {};
-  if (typeof process !== 'undefined' && process.versions && process.versions.node) {
-    buffer = pako.ungzip(fs.readFileSync(wasmPath));
-  } else {
-    buffer = pako.ungzip(await (await fetch(wasmPath)).arrayBuffer());
-  }
-  if (buffer[0] === 0x1f && buffer[1] === 0x8b) {
-    buffer = pako.ungzip(buffer);
-  }
-  const result = await WebAssembly.instantiate(buffer, go.importObject);
-  go.run(result.instance);
-  return excelize;
-};
