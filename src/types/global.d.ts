@@ -9,6 +9,7 @@ declare global {
     loaded: boolean;
   }
   interface Window {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     Go: any;
     calc: Calc;
   }

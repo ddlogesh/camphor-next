@@ -1,6 +1,6 @@
 'use client';
 
-import React, {useCallback} from "react";
+import React from "react";
 import {FileInfo} from "@/src/types/file-info";
 import {
   Select,
@@ -23,12 +23,12 @@ const SelectHeader: React.FC<SelectHeaderProps> = ({onNext, onBack, importFileIn
     return;
   }
 
-  const onSheetChange = useCallback((worksheet: string) => {
+  const onSheetChange = (worksheet: string) => {
     setImportFileInfo({
       ...importFileInfo,
       worksheet,
     });
-  }, []);
+  }
 
   return (
     <div className="flex flex-col items-center p-4">

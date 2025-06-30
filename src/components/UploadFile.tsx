@@ -1,6 +1,6 @@
 'use client';
 
-import React, {useCallback, useState} from 'react';
+import React, {useState} from 'react';
 import {ErrorCode, FileRejection, useDropzone} from 'react-dropzone';
 import {
   DownloadIcon,
@@ -92,14 +92,14 @@ const UploadFile: React.FC<UploadFileProps> = ({onNext, importFileInfo, setImpor
   /* Accept file via react-dropzone */
 
   const acceptFileFormats = () => {
-    let result: { [key: string]: string[] } = {};
+    const result: { [key: string]: string[] } = {};
     FileExtensions.forEach((extension) => {
       result[SUPPORTED_MIME_TYPES[extension]] = [`.${extension}`]
     });
     return result;
   };
 
-  const onDrop = useCallback(async (acceptedFiles: File[], fileRejections: FileRejection[]) => {
+  const onDrop = async (acceptedFiles: File[], fileRejections: FileRejection[]) => {
     setError('');
     setImportFileInfo(null);
 
@@ -124,7 +124,7 @@ const UploadFile: React.FC<UploadFileProps> = ({onNext, importFileInfo, setImpor
     }
     // TODO: Auto-select the header row if it's a first row.
     setImportFileInfo(fileInfo);
-  }, []);
+  }
 
   const {
     getRootProps,

@@ -2,7 +2,7 @@ import moment from 'moment';
 import {faker} from '@faker-js/faker';
 import {ImportConfig, ImportField, ImportFieldOptions} from "@/src/types/import-config";
 
-const generateFieldValue = (field: ImportField, options: ImportFieldOptions): any => {
+const generateFieldValue = (field: ImportField, options: ImportFieldOptions) => {
   const {
     type,
     format,
@@ -78,7 +78,7 @@ const generateFieldValue = (field: ImportField, options: ImportFieldOptions): an
       return faker.helpers.arrayElement(enumValues?.map((e) => e.id) || []);
 
     case 'object':
-      const nested: any = {};
+      const nested: Record<string, unknown> = {};
 
       for (const nestedField of fields || []) {
         nested[nestedField.id] = generateFieldValue(nestedField, options);
@@ -92,10 +92,10 @@ const generateFieldValue = (field: ImportField, options: ImportFieldOptions): an
 }
 
 const fetchSampleData = (importConfig: ImportConfig, options: ImportFieldOptions = {}) => {
-  const data: any[] = [];
+  const data: Record<string, unknown>[] = [];
 
   for (let i = 0; i < 5; i++) {
-    const row: any = {};
+    const row: Record<string, unknown> = {};
 
     for (const field of importConfig.fields || []) {
       if (field.multi) {
