@@ -15,6 +15,7 @@ export type ImportField = {
   max?: number;
   fixed?: number;
   length?: number;
+  multi?: boolean;
   fields?: ImportField[];
 };
 

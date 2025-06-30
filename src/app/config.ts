@@ -161,9 +161,22 @@ const appConfig = {
           ]
         },
         {
+          id: 'tags',
+          label: 'Tags',
+          type: 'string',
+          multi: true,
+        },
+        {
+          id: 'reference_ids',
+          label: 'Reference IDs',
+          type: 'number',
+          multi: true,
+        },
+        {
           id: 'skills',
           label: 'Skills',
-          type: 'array',
+          type: 'object',
+          multi: true,
           fields: [
             {
               id: 'skill',
