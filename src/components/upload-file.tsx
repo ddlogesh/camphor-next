@@ -23,7 +23,7 @@ import {parseJSON, toPlural} from "@/src/lib/utils";
 import {fetchSampleData} from "@/src/lib/fakedata";
 import {ImportConfig} from "@/src/types/import-config";
 import {FileInfo} from "@/src/types/file-info";
-import {getWorksheetNames} from "@/src/lib/sheet";
+import {useWasmWorker} from "@/src/contexts/wasm-worker";
 
 const SUPPORTED_MIME_TYPES: { [key: string]: string } = {
   'csv': 'text/csv',
@@ -53,6 +53,7 @@ type UploadFileProps = {
 
 const UploadFile: React.FC<UploadFileProps> = ({onNext, importFileInfo, setImportFileInfo}) => {
   const [error, setError] = useState<string>('');
+  const wasm = useWasmWorker();
 
   const removeFile = () => {
     setError('');
@@ -117,10 +118,10 @@ const UploadFile: React.FC<UploadFileProps> = ({onNext, importFileInfo, setImpor
       extension: ext || 'binary',
       file,
     }
-    if (ext === 'xlsx') {
-      const worksheets = await getWorksheetNames(file);
-      fileInfo.worksheets = worksheets;
-      fileInfo.worksheet = worksheets[0];
+    if (ext === 'xlsx' && wasm) {
+      const worksheets = await wasm.fetchWorksheet(file);
+      fileInfo.worksheets = worksheets.length > 1 ? worksheets : undefined;
+      fileInfo.worksheetId = worksheets[0]?.id;
     }
     // TODO: Auto-select the header row if it's a first row.
     setImportFileInfo(fileInfo);
