@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack",
+    "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
@@ -12,6 +12,7 @@
     "@zip.js/zip.js": "^2.7.62",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "comlink": "^4.4.2",
     "file-saver": "^2.0.5",
     "filesize": "^10.1.6",
     "lodash": "^4.17.21",

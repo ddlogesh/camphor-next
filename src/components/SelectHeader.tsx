@@ -23,10 +23,10 @@ const SelectHeader: React.FC<SelectHeaderProps> = ({onNext, onBack, importFileIn
     return;
   }
 
-  const onSheetChange = (worksheet: string) => {
+  const onSheetChange = (worksheetId: string) => {
     setImportFileInfo({
       ...importFileInfo,
-      worksheet,
+      worksheetId,
     });
   }
 
@@ -39,13 +39,13 @@ const SelectHeader: React.FC<SelectHeaderProps> = ({onNext, onBack, importFileIn
         Choose the header row present in your worksheet
       </p>
       {importFileInfo.worksheets &&
-        <Select value={importFileInfo.worksheet} onValueChange={onSheetChange}>
+        <Select value={importFileInfo.worksheetId} onValueChange={onSheetChange}>
           <SelectTrigger className="w-[180px]">
             <SelectValue placeholder="Worksheets"/>
           </SelectTrigger>
           <SelectContent>
             {importFileInfo.worksheets.map(sheet => (
-              <SelectItem key={sheet} value={sheet}>{sheet}</SelectItem>
+              <SelectItem key={sheet.id} value={sheet.id}>{sheet.name}</SelectItem>
             ))}
           </SelectContent>
         </Select>

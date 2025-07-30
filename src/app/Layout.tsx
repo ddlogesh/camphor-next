@@ -3,16 +3,16 @@
 import React from "react";
 import "./globals.css";
 import NavBar from "../components/ui/NavBar";
-import Script from "next/script";
+import {ProviderProps} from "@/src/types/global";
+import {WasmWorkerProvider} from "@/src/contexts/wasmWorker";
 
-export default function RootLayout({children}: Readonly<{
-  children: React.ReactNode
-}>) {
+const RootLayout: React.FC<ProviderProps> = ({children}) => {
   return (
-    <>
-      <Script src="/wasm/index.js" strategy="beforeInteractive" />
+    <WasmWorkerProvider>
       <NavBar/>
       <main>{children}</main>
-    </>
+    </WasmWorkerProvider>
   );
 }
+
+export default RootLayout;
