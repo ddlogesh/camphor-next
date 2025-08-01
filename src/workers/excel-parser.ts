@@ -2,13 +2,13 @@ import * as Comlink from "comlink";
 import ExcelParserModule from "@/public/wasm/excel-parser";
 import {EmscriptenModule} from "@/src/types/emscripten-module";
 import {Factory, SQLiteAPI} from "@/src/lib/excel-parser/sqlite-api";
+import {AccessHandlePoolVFS} from "@/src/lib/excel-parser/access-handle-pool-vfs";
 import {
   DATABASE_NAME,
   initReadDatabase,
   initWriteDatabase,
   readWorksheet,
 } from "@/src/lib/excel-parser/database";
-import {AccessHandlePoolVFS} from "@/src/lib/excel-parser/access-handle-pool-vfs";
 
 const FILE_DIRECTORY = '/upload';
 
