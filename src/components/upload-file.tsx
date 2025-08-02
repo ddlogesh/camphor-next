@@ -1,6 +1,6 @@
 'use client';
 
-import React, {useCallback, useState} from 'react';
+import React, {useState} from 'react';
 import {ErrorCode, FileRejection, useDropzone} from 'react-dropzone';
 import {
   DownloadIcon,
@@ -23,11 +23,11 @@ import {parseJSON, toPlural} from "@/src/lib/utils";
 import {fetchSampleData} from "@/src/lib/fakedata";
 import {ImportConfig} from "@/src/types/import-config";
 import {FileInfo} from "@/src/types/file-info";
+import {useWasmWorker} from "@/src/contexts/wasm-worker";
 
 const SUPPORTED_MIME_TYPES: { [key: string]: string } = {
   'csv': 'text/csv',
   'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-  'xls': 'application/vnd.ms-excel',
   'json': 'application/json',
 };
 
@@ -53,6 +53,7 @@ type UploadFileProps = {
 
 const UploadFile: React.FC<UploadFileProps> = ({onNext, importFileInfo, setImportFileInfo}) => {
   const [error, setError] = useState<string>('');
+  const wasm = useWasmWorker();
 
   const removeFile = () => {
     setError('');
@@ -92,14 +93,14 @@ const UploadFile: React.FC<UploadFileProps> = ({onNext, importFileInfo, setImpor
   /* Accept file via react-dropzone */
 
   const acceptFileFormats = () => {
-    let result: { [key: string]: string[] } = {};
+    const result: { [key: string]: string[] } = {};
     FileExtensions.forEach((extension) => {
       result[SUPPORTED_MIME_TYPES[extension]] = [`.${extension}`]
     });
     return result;
   };
 
-  const onDrop = useCallback((acceptedFiles: File[], fileRejections: FileRejection[]) => {
+  const onDrop = async (acceptedFiles: File[], fileRejections: FileRejection[]) => {
     setError('');
     setImportFileInfo(null);
 
@@ -111,13 +112,20 @@ const UploadFile: React.FC<UploadFileProps> = ({onNext, importFileInfo, setImpor
 
     const file = acceptedFiles[0];
     const ext = file.name.split('.').pop()?.toLowerCase();
-    setImportFileInfo({
+    const fileInfo: FileInfo = {
       name: file.name,
       size: fileSize(file.size),
       extension: ext || 'binary',
       file,
-    });
-  }, []);
+    }
+    if (ext === 'xlsx' && wasm) {
+      const worksheets = await wasm.fetchWorksheet(file);
+      fileInfo.worksheets = worksheets.length > 1 ? worksheets : undefined;
+      fileInfo.worksheetId = worksheets[0]?.id;
+    }
+    // TODO: Auto-select the header row if it's a first row.
+    setImportFileInfo(fileInfo);
+  }
 
   const {
     getRootProps,

@@ -2,7 +2,7 @@ import moment from 'moment';
 import {faker} from '@faker-js/faker';
 import {ImportConfig, ImportField, ImportFieldOptions} from "@/src/types/import-config";
 
-const generateFieldValue = (field: ImportField, options: ImportFieldOptions): any => {
+const generateFieldValue = (field: ImportField, options: ImportFieldOptions) => {
   const {
     type,
     format,
@@ -77,27 +77,14 @@ const generateFieldValue = (field: ImportField, options: ImportFieldOptions): an
     case 'select':
       return faker.helpers.arrayElement(enumValues?.map((e) => e.id) || []);
 
-    case 'array':
-      const data = Array.from({ length: 3 }).map(() => {
-        const row: any = {};
-
-        for (const field of fields || []) {
-          row[field.id] = generateFieldValue(field, options);
-        }
-
-        return row;
-      });
-
-      return options.serializeObject ? JSON.stringify(data) : data;
-
     case 'object':
-      const nested: any = {};
+      const nested: Record<string, unknown> = {};
 
       for (const nestedField of fields || []) {
         nested[nestedField.id] = generateFieldValue(nestedField, options);
       }
 
-      return options.serializeObject ? JSON.stringify(nested) : nested;
+      return nested;
 
     default:
       return null;
@@ -105,13 +92,23 @@ const generateFieldValue = (field: ImportField, options: ImportFieldOptions): an
 }
 
 const fetchSampleData = (importConfig: ImportConfig, options: ImportFieldOptions = {}) => {
-  const data: any[] = [];
+  const data: Record<string, unknown>[] = [];
 
   for (let i = 0; i < 5; i++) {
-    const row: any = {};
+    const row: Record<string, unknown> = {};
 
     for (const field of importConfig.fields || []) {
-      row[field.id] = generateFieldValue(field, options);
+      if (field.multi) {
+        row[field.id] = Array.from({ length: 3 }).map(() => {
+          return generateFieldValue(field, options);
+        });
+      } else {
+        row[field.id] = generateFieldValue(field, options);
+      }
+
+      if (options.serializeObject && (field.multi || field.type === 'object')) {
+        row[field.id] = JSON.stringify(row[field.id]);
+      }
     }
     data.push(row);
   }
