@@ -1,5 +1,3 @@
-'use client';
-
 import React from "react";
 import {FileInfo} from "@/src/types/file-info";
 import {

@@ -14,7 +14,7 @@ export const WasmWorkerProvider: React.FC<ProviderProps> = ({ children }) => {
     const workerApi = Comlink.wrap<ExcelParser>(worker);
 
     (async () => {
-      await workerApi.load();
+      await workerApi.loadWasm();
       setApi(() => workerApi);
     } )();
 

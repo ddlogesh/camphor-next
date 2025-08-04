@@ -1,14 +1,11 @@
 import * as Comlink from "comlink";
 import ExcelParserModule from "@/public/wasm/excel-parser";
 import {EmscriptenModule} from "@/src/types/emscripten-module";
+import {ImportConfig} from "@/src/types/import-config";
 import {Factory, SQLiteAPI} from "@/src/lib/excel-parser/sqlite-api";
 import {AccessHandlePoolVFS} from "@/src/lib/excel-parser/access-handle-pool-vfs";
-import {
-  DATABASE_NAME,
-  initReadDatabase,
-  initWriteDatabase,
-  readWorksheet,
-} from "@/src/lib/excel-parser/database";
+import {initReadDB, initWriteDB, readWorksheet} from "@/src/lib/excel-parser/database";
+import {getDatabaseFileName} from "@/src/lib/utils";
 
 const FILE_DIRECTORY = '/upload';
 
@@ -19,8 +16,57 @@ export default class ExcelParser {
     this.wasm = null;
   }
 
-  public async load() {
+  public async loadWasm(importConfig: ImportConfig | null = null) {
     this.wasm ||= await this.initWasm();
+
+    if (importConfig)
+      this.wasm.imports[importConfig.id] ||= await this.initDatabase(importConfig);
+  }
+
+  public async fetchWorksheet(file: File, importConfig: ImportConfig) {
+    this.wasm ||= await this.getWasm(importConfig);
+
+    const {id: importId} = importConfig;
+    const {FS, WORKERFS, sqlite, imports} = this.wasm;
+    const {readDB} = imports[importId];
+
+    try {
+      FS.mkdir(FILE_DIRECTORY);
+    } catch {
+      // Directory might already exist
+    }
+
+    try {
+      FS.unmount(FILE_DIRECTORY);
+    } catch {
+      // Mount point might not exist
+    }
+
+    FS.mount(WORKERFS, {files: [file]}, FILE_DIRECTORY);
+    const result = this.wasm.loadWorksheet(`${FILE_DIRECTORY}/${file.name}`, getDatabaseFileName(importId));
+    if (result) {
+      return await readWorksheet(sqlite, readDB);
+    } else {
+      console.error('Unable to fetch worksheet');
+      return [];
+    }
+  }
+
+  public async close() {
+    if (!this.wasm) return;
+
+    const {imports, sqlite} = this.wasm;
+
+    while (Object.keys(imports).length > 0) {
+      const [importId, {readDB, writeDB}] = Object.entries(imports)[0];
+
+      await Promise.all([
+        sqlite.close(readDB),
+        sqlite.close(writeDB),
+      ]);
+
+      delete imports[importId];
+    }
   }
 
   private async initWasm() {
@@ -32,45 +78,35 @@ export default class ExcelParser {
     const sqliteApi: SQLiteAPI = Factory(wasm);
     const vfs = await AccessHandlePoolVFS.create('.camphor', wasm);
     sqliteApi.vfs_register(vfs, true);
-
-    wasm.writeDB = await initWriteDatabase(sqliteApi);
-    wasm.readDB = await initReadDatabase(sqliteApi);
     wasm.sqlite = sqliteApi;
+    wasm.imports = {};
 
     console.log('WASM initialized');
     return wasm;
   }
 
-  public async fetchWorksheet(file: File) {
-    this.wasm ||= await this.initWasm();
-
-    try {
-      this.wasm.FS.mkdir(FILE_DIRECTORY);
-    } catch {
-      // Directory might already exist
-    }
-
-    try {
-      this.wasm.FS.unmount(FILE_DIRECTORY);
-    } catch {
-      // Mount point might not exist
-    }
-
-    this.wasm.FS.mount(this.wasm.WORKERFS, {files: [file]}, FILE_DIRECTORY);
-    const result = this.wasm.loadWorksheet(`${FILE_DIRECTORY}/${file.name}`, DATABASE_NAME);
-    if (result) {
-      return await readWorksheet(this.wasm.sqlite, this.wasm.readDB);
-    } else {
-      console.error('Unable to fetch worksheet');
-      return [];
-    }
+  private async getWasm(importConfig: ImportConfig) {
+    await this.loadWasm(importConfig);
+    return this.wasm as EmscriptenModule;
   }
 
-  public async close() {
-    if (!this.wasm) return;
+  private async initDatabase(importConfig: ImportConfig) {
+    this.wasm ||= await this.initWasm();
 
-    await this.wasm.sqlite.close(this.wasm.writeDB);
-    await this.wasm.sqlite.close(this.wasm.readDB);
+    const {id: importId} = importConfig;
+    const {imports, sqlite} = this.wasm;
+
+    const database = imports[importId];
+    if (database) return database;
+
+    const writeDB = await initWriteDB(sqlite, importConfig);
+    const readDB = await initReadDB(sqlite, importConfig);
+
+    console.log(`DB initialized for ${importId}`);
+    return {
+      writeDB,
+      readDB,
+    }
   }
 }
 

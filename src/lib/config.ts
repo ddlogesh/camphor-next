@@ -212,6 +212,31 @@ const appConfig = {
           ]
         },
       ]
+    },
+    {
+      id: 'products',
+      label: 'Products',
+      fields: [
+        {
+          id: 'ProductID',
+          label: 'Product ID',
+          type: 'number',
+          required: true,
+          unique: true,
+        },
+        {
+          id: 'ProductName',
+          label: 'Product Name',
+          type: 'string',
+          required: true,
+        },
+        {
+          id: 'Price',
+          label: 'Product Price',
+          type: 'float',
+          fixed: 2,
+        },
+      ]
     }
   ]
 }

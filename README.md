@@ -4,7 +4,7 @@ A fast, efficient bulk data importer built with Next.js and React that works ent
 
 ## Features
 
-- Import/Export files in different formats: (CSV, XLS, XLSX, JSON)
+- Import/Export files in different formats: (CSV, XLSX, JSON)
 - File size limit: 50 MB
 - Generate sample file based on schema
 - Validate columns with predefined and custom patterns
