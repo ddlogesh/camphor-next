@@ -1,5 +1,3 @@
-'use client';
-
 import React, {useState} from 'react';
 import {ErrorCode, FileRejection, useDropzone} from 'react-dropzone';
 import {
@@ -18,7 +16,7 @@ import {partial} from 'filesize';
 import {saveAs} from 'file-saver';
 import _ from 'lodash';
 import * as XLSX from 'xlsx';
-import appConfig from "@/src/app/config";
+import appConfig from "@/src/lib/config";
 import {parseJSON, toPlural} from "@/src/lib/utils";
 import {fetchSampleData} from "@/src/lib/fakedata";
 import {ImportConfig} from "@/src/types/import-config";
@@ -47,11 +45,12 @@ const ErrorMessages: { [key: string]: string } = {
 
 type UploadFileProps = {
   onNext: () => void;
+  importConfig: ImportConfig;
   importFileInfo: FileInfo | null;
   setImportFileInfo: (fileInfo: FileInfo | null) => void;
 }
 
-const UploadFile: React.FC<UploadFileProps> = ({onNext, importFileInfo, setImportFileInfo}) => {
+const FilePicker: React.FC<UploadFileProps> = ({onNext, importFileInfo, setImportFileInfo, importConfig}) => {
   const [error, setError] = useState<string>('');
   const wasm = useWasmWorker();
 
@@ -63,7 +62,6 @@ const UploadFile: React.FC<UploadFileProps> = ({onNext, importFileInfo, setImpor
   /* Export file as CSV, Excel or JSON */
 
   const exportFile = (fileFormat: string) => {
-    const importConfig: ImportConfig = appConfig.imports[0];
     const data = fetchSampleData(importConfig, {serializeObject: true});
     const worksheet = XLSX.utils.json_to_sheet(data);
     const workbook = XLSX.utils.book_new();
@@ -83,7 +81,6 @@ const UploadFile: React.FC<UploadFileProps> = ({onNext, importFileInfo, setImpor
   }
 
   const exportJSON = () => {
-    const importConfig: ImportConfig = appConfig.imports[0];
     const data = fetchSampleData(importConfig);
     const jsonString = JSON.stringify(data, null, 2);
     const blob = new Blob([jsonString], {type: 'application/json;charset=utf-8;'});
@@ -119,7 +116,7 @@ const UploadFile: React.FC<UploadFileProps> = ({onNext, importFileInfo, setImpor
       file,
     }
     if (ext === 'xlsx' && wasm) {
-      const worksheets = await wasm.fetchWorksheet(file);
+      const worksheets = await wasm.fetchWorksheet(file, importConfig);
       fileInfo.worksheets = worksheets.length > 1 ? worksheets : undefined;
       fileInfo.worksheetId = worksheets[0]?.id;
     }
@@ -226,4 +223,4 @@ const UploadFile: React.FC<UploadFileProps> = ({onNext, importFileInfo, setImpor
   );
 };
 
-export default UploadFile;
+export default FilePicker;

@@ -18,8 +18,13 @@ const cn = (...inputs: ClassValue[]) => {
   return twMerge(clsx(inputs))
 }
 
+const getDatabaseFileName = (importId: string) => {
+  return `import_${importId.toLowerCase()}.db`;
+}
+
 export {
   toPlural,
   parseJSON,
   cn,
+  getDatabaseFileName,
 };

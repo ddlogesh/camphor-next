@@ -2,8 +2,12 @@ import {SQLiteAPI} from "@/src/lib/excel-parser/sqlite-api";
 
 export declare interface EmscriptenModule {
   sqlite: SQLiteAPI;
-  readDB: number;
-  writeDB: number;
+  imports: {
+    [importId: string]: {
+      readDB: number;
+      writeDB: number;
+    }
+  }
 
   loadWorksheet: (filePath: string, dbName: string) => boolean;
 
