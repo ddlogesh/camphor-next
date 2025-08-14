@@ -1,12 +1,11 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, PropsWithChildren } from 'react';
 import * as Comlink from "comlink";
 import {ExcelParserWorker} from "@/src/workers";
 import ExcelParser from "@/src/workers/excel-parser";
-import {ProviderProps} from "@/src/types/global";
 
 const WorkerContext = createContext<Comlink.Remote<ExcelParser> | null>(null);
 
-export const WasmWorkerProvider: React.FC<ProviderProps> = ({ children }) => {
+export const WasmWorkerProvider: React.FC<PropsWithChildren> = ({ children }) => {
   const [api, setApi] = useState<Comlink.Remote<ExcelParser> | null>(null);
 
   useEffect(() => {

@@ -1,6 +1,17 @@
 export type Worksheet = {
-  id: string;
+  id: number;
   name: string;
+}
+
+export type WorksheetPreview = {
+  worksheetId: number;
+  rowId: number;
+  rowData: string;
+  _rows?: string[];
+}
+
+export type HeaderRow = {
+  [key: `C${number}`]: string;
 }
 
 export type FileInfo = {
@@ -8,6 +19,7 @@ export type FileInfo = {
   size: string;
   extension: string;
   file: File;
-  worksheets?: Worksheet[];
-  worksheetId?: string;
+  worksheetId?: number;
+  headerRowId?: number;
+  headerRow?: HeaderRow;
 };

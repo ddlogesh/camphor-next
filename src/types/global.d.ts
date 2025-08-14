@@ -1,5 +1,1 @@
-import React from "react";
-
-export interface ProviderProps {
-  children: React.ReactNode;
-}
+export type Stage = 'upload' | 'header' | 'map' | 'validate' | 'submit';

@@ -1,5 +1,11 @@
-import React from "react";
-import {FileInfo} from "@/src/types/file-info";
+"use client";
+
+import {useCallback, useEffect, useState, useRef, Dispatch, SetStateAction} from "react";
+import DataTable, {DataTableCallbackOptions} from "@/src/components/data-table";
+import {FileInfo, HeaderRow, Worksheet} from "@/src/types/file-info";
+import {ImportConfig} from "@/src/types/import-config";
+import {Stage} from "@/src/types/global";
+import {useWasmWorker} from "@/src/contexts/wasm-worker";
 import {
   Select,
   SelectContent,
@@ -9,24 +15,56 @@ import {
 } from "@/src/components/ui/select"
 
 type SelectHeaderProps = {
-  onNext: () => void;
-  onBack: () => void;
-  importFileInfo: FileInfo | null;
-  setImportFileInfo: (fileInfo: FileInfo | null) => void;
+  importConfig: ImportConfig;
+  setImportFileInfo: Dispatch<SetStateAction<FileInfo | null>>;
+  setStage: Dispatch<SetStateAction<Stage>>;
 };
 
-const SelectHeader: React.FC<SelectHeaderProps> = ({onNext, onBack, importFileInfo, setImportFileInfo}) => {
-  if (importFileInfo == null) {
-    onBack();
-    return;
+const SelectHeader = (props: SelectHeaderProps) => {
+  const {importConfig, setImportFileInfo, setStage} = props;
+  const [worksheets, setWorksheets] = useState<Worksheet[] | null>(null);
+  const [worksheetId, setWorksheetId] = useState<number>(1);
+  const [headerRow, setHeaderRow] = useState<HeaderRow | null>(null);
+  const worksheetIdRef = useRef(worksheetId);
+  const wasm = useWasmWorker();
+
+  useEffect(() => {
+    (async () => {
+      if (!wasm) return;
+
+      const sheets = await wasm.fetchWorksheets(importConfig);
+      setWorksheets(sheets);
+    } )();
+  }, [wasm, importConfig]);
+
+  const onSheetChange = async (sheetId: string) => {
+    const id = parseInt(sheetId);
+    setWorksheetId(id);
+    worksheetIdRef.current = id;
   }
 
-  const onSheetChange = (worksheetId: string) => {
-    setImportFileInfo({
-      ...importFileInfo,
-      worksheetId,
-    });
+  const loadRows = useCallback((_options: DataTableCallbackOptions<HeaderRow>) => {
+    if (!wasm) return Promise.resolve([]);
+
+    return wasm.fetchWorksheetPreviews(importConfig, worksheetIdRef.current);
+  }, [wasm, importConfig]);
+
+  const onNext = () => {
+    if (!headerRow) {
+      alert('Please select a header row');
+      return;
+    }
+
+    setImportFileInfo((prev) => ({
+      ...prev as FileInfo,
+      worksheetId: worksheetIdRef.current,
+      headerRowId: parseInt(headerRow['C0']),
+      headerRow,
+    }));
+    setStage('map');
   }
+
+  const onBack = () => setStage('upload');
 
   return (
     <div className="flex flex-col items-center p-4">
@@ -36,18 +74,30 @@ const SelectHeader: React.FC<SelectHeaderProps> = ({onNext, onBack, importFileIn
       <p className="text-sm text-gray-600">
         Choose the header row present in your worksheet
       </p>
-      {importFileInfo.worksheets &&
-        <Select value={importFileInfo.worksheetId} onValueChange={onSheetChange}>
+      {worksheets &&
+        <Select value={worksheetId.toString()} onValueChange={onSheetChange}>
           <SelectTrigger className="w-[180px]">
             <SelectValue placeholder="Worksheets"/>
           </SelectTrigger>
           <SelectContent>
-            {importFileInfo.worksheets.map(sheet => (
-              <SelectItem key={sheet.id} value={sheet.id}>{sheet.name}</SelectItem>
+            {worksheets.map(sheet => (
+              <SelectItem key={sheet.id} value={sheet.id.toString()}>{sheet.name}</SelectItem>
             ))}
           </SelectContent>
         </Select>
       }
+      <div className="mt-6 w-1/2">
+        {wasm &&
+          <DataTable<HeaderRow>
+            height={"60vh"}
+            worksheetId={worksheetId}
+            callback={loadRows}
+            hideHeader={true}
+            selectable={true}
+            setHeaderRow={setHeaderRow}
+          />
+        }
+      </div>
       <div className="flex flex-row items-center mt-6 disabled:opacity-50">
         <button
           className="px-6 py-2 mr-4 bg-blue-600 text-white rounded hover:bg-blue-700"
@@ -56,8 +106,9 @@ const SelectHeader: React.FC<SelectHeaderProps> = ({onNext, onBack, importFileIn
           Back
         </button>
         <button
-          className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
           onClick={onNext}
+          disabled={!headerRow}
         >
           Next
         </button>
