@@ -1,6 +1,7 @@
 import type {AppProps} from 'next/app';
 import NavBar from "@/src/components/ui/nav-bar";
 import "@/src/styles/globals.css";
+import "tabulator-tables/dist/css/tabulator.min.css";
 import {WasmWorkerProvider} from "@/src/contexts/wasm-worker";
 
 export default function App({Component, pageProps}: AppProps) {
