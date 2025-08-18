@@ -1,6 +1,6 @@
 "use client";
 
-import {useCallback, useEffect, useState, useRef, Dispatch, SetStateAction} from "react";
+import {useCallback, useEffect, useState, useRef, useMemo, Dispatch, SetStateAction} from "react";
 import DataTable, {DataTableCallbackOptions} from "@/src/components/data-table";
 import {FileInfo, HeaderRow, Worksheet} from "@/src/types/file-info";
 import {ImportConfig} from "@/src/types/import-config";
@@ -16,17 +16,19 @@ import {
 
 type SelectHeaderProps = {
   importConfig: ImportConfig;
+  importFileInfo: FileInfo | null;
   setImportFileInfo: Dispatch<SetStateAction<FileInfo | null>>;
   setStage: Dispatch<SetStateAction<Stage>>;
 };
 
 const SelectHeader = (props: SelectHeaderProps) => {
-  const {importConfig, setImportFileInfo, setStage} = props;
+  const {importConfig, importFileInfo, setImportFileInfo, setStage} = props;
   const [worksheets, setWorksheets] = useState<Worksheet[] | null>(null);
-  const [worksheetId, setWorksheetId] = useState<number>(1);
-  const [headerRow, setHeaderRow] = useState<HeaderRow | null>(null);
+  const [worksheetId, setWorksheetId] = useState<number>(importFileInfo?.worksheetId ?? 1);
+  const [selectedRow, setSelectedRow] = useState<HeaderRow | null>( null);
   const worksheetIdRef = useRef(worksheetId);
   const wasm = useWasmWorker();
+  const metadata = useMemo(() => ({worksheetId}), [worksheetId]);
 
   useEffect(() => {
     (async () => {
@@ -50,7 +52,7 @@ const SelectHeader = (props: SelectHeaderProps) => {
   }, [wasm, importConfig]);
 
   const onNext = () => {
-    if (!headerRow) {
+    if (!selectedRow) {
       alert('Please select a header row');
       return;
     }
@@ -58,8 +60,8 @@ const SelectHeader = (props: SelectHeaderProps) => {
     setImportFileInfo((prev) => ({
       ...prev as FileInfo,
       worksheetId: worksheetIdRef.current,
-      headerRowId: parseInt(headerRow['C0']),
-      actualHeaders: Object.values(headerRow),
+      headerRowId: parseInt(selectedRow.C0),
+      actualHeaders: Object.values(selectedRow),
     }));
     setStage('map');
   }
@@ -90,11 +92,12 @@ const SelectHeader = (props: SelectHeaderProps) => {
         {wasm &&
           <DataTable<HeaderRow>
             height={"60vh"}
-            worksheetId={worksheetId}
             callback={loadRows}
             hideHeader={true}
             selectable={true}
-            setHeaderRow={setHeaderRow}
+            selectRow={importFileInfo?.headerRowId}
+            setSelectedRow={setSelectedRow}
+            metadata={metadata}
           />
         }
       </div>
@@ -108,7 +111,7 @@ const SelectHeader = (props: SelectHeaderProps) => {
         <button
           className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
           onClick={onNext}
-          disabled={!headerRow}
+          disabled={!selectedRow}
         >
           Next
         </button>

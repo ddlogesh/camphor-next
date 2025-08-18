@@ -5,7 +5,6 @@ import {TabulatorFull as Tabulator, ColumnDefinition, Options} from "tabulator-t
 import "tabulator-tables/dist/css/tabulator.min.css";
 import LRUCache from "@/src/lib/lru-cache";
 import {LIMIT_ROWS} from "@/src/lib/constants/sql-queries";
-import {HeaderRow} from "@/src/types/file-info";
 
 export type DataTableCallbackOptions<T> = {
   lastRow: T | null;
@@ -13,17 +12,18 @@ export type DataTableCallbackOptions<T> = {
 
 type DataTableProps<T> = {
   height: string;
-  worksheetId: number;
   columns?: ColumnDefinition[];
   callback: (options: DataTableCallbackOptions<T>) => Promise<T[]>;
   hideHeader?: boolean;
-  setHeaderRow?: Dispatch<SetStateAction<HeaderRow | null>>;
+  selectRow?: string | number;
+  setSelectedRow?: Dispatch<SetStateAction<T | null>>;
   selectable?: boolean;
+  metadata?: { [key: string]: string | number | undefined };
 };
 
 const DataTable = <T extends object,>(props: DataTableProps<T>) => {
   const emptyList = useMemo(() => [], []);
-  const {height, worksheetId, columns = emptyList, callback, hideHeader = false, setHeaderRow, selectable = false} = props;
+  const {height, columns = emptyList, callback, hideHeader = false, selectRow, setSelectedRow, selectable = false, metadata = {}} = props;
 
   const tableRef = useRef<HTMLDivElement>(null);
   const tableInstance = useRef<Tabulator>(null);
@@ -71,12 +71,14 @@ const DataTable = <T extends object,>(props: DataTableProps<T>) => {
   }, [callback, hideHeader, initColumns]);
 
   useEffect(() => {
-    if (tableInstance.current) {
+    if (!tableInstance.current) return;
+
+    if (metadata.worksheetId) {
       pageCache.current.clear();
       lastRowMap.current = {};
       (async () => tableInstance.current?.setData() )();
     }
-  }, [worksheetId]);
+  }, [metadata]);
 
   useEffect(() => {
     if (!tableRef.current) return;
@@ -85,6 +87,7 @@ const DataTable = <T extends object,>(props: DataTableProps<T>) => {
       height,
       columns,
       ajaxRequestFunc,
+      index: 'C0',
       ajaxURL: 'any',
       layout: 'fitDataStretch',
       layoutColumnsOnNewData: true,
@@ -100,12 +103,13 @@ const DataTable = <T extends object,>(props: DataTableProps<T>) => {
     tableInstance.current = table;
     const cache = pageCache.current;
 
-    table.on('rowSelected', function(row) {
-      if (setHeaderRow) setHeaderRow(row.getData() as HeaderRow);
-    });
+    table.on('rowSelected', (row) => setSelectedRow?.(row.getData() as T));
+    table.on('rowDeselected', (_row) => setSelectedRow?.(null));
+    table.on('tableBuilt', function(){
+      if (!selectRow) return;
 
-    table.on('rowDeselected', function(_row) {
-      if (setHeaderRow) setHeaderRow(null);
+      const row = table.getRow(selectRow);
+      row.scrollTo('nearest').then(() => row.select());
     });
 
     return () => {
@@ -117,7 +121,7 @@ const DataTable = <T extends object,>(props: DataTableProps<T>) => {
         cache.clear();
       }
     };
-  }, [ajaxRequestFunc, columns, height, hideHeader, setHeaderRow, selectable]);
+  }, [ajaxRequestFunc, columns, height, hideHeader, selectRow, setSelectedRow, selectable]);
 
   return (
     <div style={{ height, overflow: 'auto' }}>
