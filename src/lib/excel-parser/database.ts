@@ -57,8 +57,12 @@ const listHeaderRows = async (sqlite: SQLiteAPI, db: number) => {
 const listWorksheetPreviews = async (sqlite: SQLiteAPI, db: number, sheetId: number) => {
   const headers: HeaderRow[] = [];
   await sqlite.exec(db, SQLiteQuery.readWorksheetPreview({sheetId, limit: SQLiteQuery.LIMIT_ROWS}), (row) => {
+    const worksheetId = row[0] as number;
+    const rowId = row[1] as number;
     const cells: HeaderRow = {
-      C0: (row[1] as number).toString(),
+      worksheetId,
+      rowId,
+      C0: `${worksheetId}:${rowId}`,
     };
     const rowData = row[2] as string;
     rowData.split('\x1F').forEach((cell, i) => cells[`C${i + 1}`] = cell);

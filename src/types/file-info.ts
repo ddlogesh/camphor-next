@@ -3,14 +3,18 @@ export type Worksheet = {
   name: string;
 }
 
-export type WorksheetPreview = {
-  worksheetId: number;
+export interface DataRow {
   rowId: number;
+}
+
+export interface WorksheetPreview extends DataRow {
+  worksheetId: number;
   rowData: string;
   _rows?: string[];
 }
 
-export type HeaderRow = {
+export interface HeaderRow extends DataRow {
+  worksheetId: number;
   [key: `C${number}`]: string;
 }
 

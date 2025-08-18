@@ -59,7 +59,8 @@ const FilePicker = (props: FilePickerProps) => {
   const wasm = useWasmWorker();
 
   const onNext = () => {
-    // TODO: If worksheet_data table contains delimiter rows though file not present, navigate to validate stage
+    // TODO: If expectedHeaders are present (or) worksheet_data table contains delimiter rows, navigate to validate stage
+    // Else navigate to 'header' stage
     setStage(importFileInfo?.headerRowId ? 'validate' : 'header');
   }
 

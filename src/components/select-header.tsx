@@ -2,10 +2,11 @@
 
 import {useCallback, useEffect, useState, useRef, useMemo, Dispatch, SetStateAction} from "react";
 import DataTable, {DataTableCallbackOptions} from "@/src/components/data-table";
-import {FileInfo, HeaderRow, Worksheet} from "@/src/types/file-info";
+import {FileInfo, Worksheet, HeaderRow} from "@/src/types/file-info";
 import {ImportConfig} from "@/src/types/import-config";
 import {Stage} from "@/src/types/global";
 import {useWasmWorker} from "@/src/contexts/wasm-worker";
+import {ColumnDefinition} from "tabulator-tables";
 import {
   Select,
   SelectContent,
@@ -28,7 +29,27 @@ const SelectHeader = (props: SelectHeaderProps) => {
   const [selectedRow, setSelectedRow] = useState<HeaderRow | null>( null);
   const worksheetIdRef = useRef(worksheetId);
   const wasm = useWasmWorker();
+
   const metadata = useMemo(() => ({worksheetId}), [worksheetId]);
+  const columns: ColumnDefinition[] = useMemo(() => [
+    {field: 'worksheetId', title: 'Worksheet Id', visible: false},
+    {field: 'rowId', title: 'Row Id', visible: false},
+    {field: 'C0', title: 'C0', formatter: 'rowSelection', resizable: false, frozen: true, hozAlign: 'center'},
+  ], []);
+  const selectRow = useMemo(() => {
+    if (!importFileInfo) return;
+
+    const {worksheetId, headerRowId} = importFileInfo;
+    if (!worksheetId || !headerRowId) return;
+
+    return `${worksheetId}:${headerRowId}`;
+  }, [importFileInfo]);
+
+  const onSheetChange = async (sheetId: string) => {
+    const id = parseInt(sheetId);
+    setWorksheetId(id);
+    worksheetIdRef.current = id;
+  }
 
   useEffect(() => {
     (async () => {
@@ -38,12 +59,6 @@ const SelectHeader = (props: SelectHeaderProps) => {
       setWorksheets(sheets);
     } )();
   }, [wasm, importConfig]);
-
-  const onSheetChange = async (sheetId: string) => {
-    const id = parseInt(sheetId);
-    setWorksheetId(id);
-    worksheetIdRef.current = id;
-  }
 
   const loadRows = useCallback((_options: DataTableCallbackOptions<HeaderRow>) => {
     if (!wasm) return Promise.resolve([]);
@@ -57,11 +72,13 @@ const SelectHeader = (props: SelectHeaderProps) => {
       return;
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const {worksheetId, rowId: headerRowId, C0, ...fields} = selectedRow;
     setImportFileInfo((prev) => ({
       ...prev as FileInfo,
-      worksheetId: worksheetIdRef.current,
-      headerRowId: parseInt(selectedRow.C0),
-      actualHeaders: Object.values(selectedRow),
+      worksheetId,
+      headerRowId,
+      actualHeaders: Object.values(fields),
     }));
     setStage('map');
   }
@@ -92,11 +109,13 @@ const SelectHeader = (props: SelectHeaderProps) => {
         {wasm &&
           <DataTable<HeaderRow>
             height={"60vh"}
+            columns={columns}
             callback={loadRows}
             hideHeader={true}
             selectable={true}
-            selectRow={importFileInfo?.headerRowId}
+            selectRow={selectRow}
             setSelectedRow={setSelectedRow}
+            rowIndex={'C0'}
             metadata={metadata}
           />
         }
