@@ -44,6 +44,7 @@ const DataImporter = (props: DataImporterProps) => {
       {stage === 'header' && importFileInfo && (
         <SelectHeader
           importConfig={importConfig}
+          importFileInfo={importFileInfo}
           setImportFileInfo={setImportFileInfo}
           setStage={setStage}
         />

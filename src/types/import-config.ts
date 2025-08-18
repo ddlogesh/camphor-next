@@ -6,6 +6,7 @@ export type ImportConfig = {
 
 export type ImportField = {
   id: string;
+  label: string;
   type: string;
   format?: string;
   enum?: { id: string; label: string }[];

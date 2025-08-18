@@ -129,6 +129,7 @@ const FilePicker = (props: FilePickerProps) => {
       if (headerRow) {
         fileInfo.worksheetId = headerRow.worksheetId;
         fileInfo.headerRowId = headerRow.rowId;
+        fileInfo.actualHeaders = headerRow._rows;
       }
     }
     setImportFileInfo(fileInfo);

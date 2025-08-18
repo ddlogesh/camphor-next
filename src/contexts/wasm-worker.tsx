@@ -18,10 +18,7 @@ export const WasmWorkerProvider: React.FC<PropsWithChildren> = ({ children }) =>
     } )();
 
     return () => {
-      workerApi.close().then(() => {
-        worker.terminate();
-        console.log('Worker terminated');
-      });
+      workerApi.close().then(() => worker.terminate());
     };
   }, []);
 

@@ -94,7 +94,7 @@ const DataTable = <T extends object,>(props: DataTableProps<T>) => {
     }
     if (selectable) {
       options.selectableRows = 1;
-      options.rowHeader = {field: 'C0', formatter: 'rowSelection', resizable: false, frozen: true, hozAlign:'center'};
+      options.rowHeader = {field: 'C0', formatter: 'rowSelection', resizable: false, frozen: true, hozAlign: 'center'};
     }
     const table = new Tabulator(tableRef.current, options);
     tableInstance.current = table;

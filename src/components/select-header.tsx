@@ -59,7 +59,7 @@ const SelectHeader = (props: SelectHeaderProps) => {
       ...prev as FileInfo,
       worksheetId: worksheetIdRef.current,
       headerRowId: parseInt(headerRow['C0']),
-      headerRow,
+      actualHeaders: Object.values(headerRow),
     }));
     setStage('map');
   }

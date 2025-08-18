@@ -21,5 +21,5 @@ export type FileInfo = {
   file: File;
   worksheetId?: number;
   headerRowId?: number;
-  headerRow?: HeaderRow;
+  actualHeaders?: string[];
 };

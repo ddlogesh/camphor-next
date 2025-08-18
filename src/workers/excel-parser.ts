@@ -135,7 +135,6 @@ export default class ExcelParser {
     const writeDB = await initWriteDB(sqlite, importConfig);
     const readDB = await initReadDB(sqlite, importConfig);
 
-    console.log(`DB initialized for ${importId}`);
     return {
       writeDB,
       readDB,

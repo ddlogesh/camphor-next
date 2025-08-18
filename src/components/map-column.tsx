@@ -15,10 +15,6 @@ type MapColumnProps = {
 const MapColumn = (props: MapColumnProps) => {
   const {importConfig, importFileInfo, setImportFileInfo, setStage} = props;
 
-  useEffect(() => {
-    console.log('importFileInfo', importFileInfo);
-  }, [importFileInfo])
-
   const onNext = () => {
     setImportFileInfo((prev) => ({
       ...prev as FileInfo,
