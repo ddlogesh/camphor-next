@@ -5,8 +5,8 @@ import DataTable, {DataTableCallbackOptions} from "@/src/components/data-table";
 import {FileInfo, Worksheet, HeaderRow} from "@/src/types/file-info";
 import {ImportConfig} from "@/src/types/import-config";
 import {Stage} from "@/src/types/global";
-import {useWasmWorker} from "@/src/contexts/wasm-worker";
 import {ColumnDefinition} from "tabulator-tables";
+import {useWasmWorker} from "@/src/contexts/wasm-worker";
 import {
   Select,
   SelectContent,

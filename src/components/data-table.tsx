@@ -41,7 +41,7 @@ const DataTable = <T extends DataRow, >(props: DataTableProps<T>) => {
   const lastRowMap = useRef<Record<number, T | null>>({});
   const pageCache = useRef(new LRUCache<T>(3));
 
-  const initColumns = useCallback((rows: T[]) => {
+  const defineColumns = useCallback((rows: T[]) => {
     if (!tableInstance.current) return;
 
     const maxCols = Math.max(...rows.map(r => Object.keys(r).length));
@@ -59,21 +59,14 @@ const DataTable = <T extends DataRow, >(props: DataTableProps<T>) => {
     }
   }, [columns, selectable]);
 
-  const findRow = (index: string | number): RowComponent | undefined => {
-    if (!tableInstance.current) return;
-
-    const row = tableInstance.current.rowManager.findRow(index);
-    if (!row) return;
-
-    return row.getComponent();
-  }
-
   const scrollAndSelectRow = useCallback(() => {
-    if (!selectRow) return;
+    if (!selectRow || !tableInstance.current) return;
 
-    const row = findRow(selectRow);
-    if (!row) return;
+    // Rewriting findRow implementation to avoid console warnings for invalid row index
+    const rawRow = tableInstance.current.rowManager.findRow(selectRow);
+    if (!rawRow) return;
 
+    const row: RowComponent = rawRow.getComponent();
     row.scrollTo('nearest').then(() => row.select());
   }, [selectRow]);
 
@@ -93,14 +86,14 @@ const DataTable = <T extends DataRow, >(props: DataTableProps<T>) => {
     pageCache.current.set(page, rows);
     if (rows.length > 0) {
       lastRowMap.current[page] = rows[rows.length - 1];
-      if (hideHeader) initColumns(rows);
+      if (hideHeader) defineColumns(rows);
     }
 
     return {
       data: rows,
       last_page: rows.length === LIMIT_ROWS ? page + 1 : page,
     };
-  }, [callback, hideHeader, initColumns]);
+  }, [callback, hideHeader, defineColumns]);
 
   useEffect(() => {
     if (!tableInstance.current) return;
@@ -119,8 +112,8 @@ const DataTable = <T extends DataRow, >(props: DataTableProps<T>) => {
       height,
       columns,
       ajaxRequestFunc,
-      index: rowIndex,
       ajaxURL: 'any',
+      index: rowIndex,
       layout: 'fitDataStretch',
       layoutColumnsOnNewData: true,
       progressiveLoad: 'scroll',
