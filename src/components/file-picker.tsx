@@ -1,4 +1,6 @@
-import React, {useState} from 'react';
+"use client";
+
+import {useState, Dispatch, SetStateAction} from 'react';
 import {ErrorCode, FileRejection, useDropzone} from 'react-dropzone';
 import {
   DownloadIcon,
@@ -21,6 +23,7 @@ import {parseJSON, toPlural} from "@/src/lib/utils";
 import {fetchSampleData} from "@/src/lib/fakedata";
 import {ImportConfig} from "@/src/types/import-config";
 import {FileInfo} from "@/src/types/file-info";
+import {Stage} from "@/src/types/global";
 import {useWasmWorker} from "@/src/contexts/wasm-worker";
 
 const SUPPORTED_MIME_TYPES: { [key: string]: string } = {
@@ -43,16 +46,23 @@ const ErrorMessages: { [key: string]: string } = {
   [ErrorCode.TooManyFiles]: `Please upload a single file at once`,
 };
 
-type UploadFileProps = {
-  onNext: () => void;
+type FilePickerProps = {
   importConfig: ImportConfig;
   importFileInfo: FileInfo | null;
-  setImportFileInfo: (fileInfo: FileInfo | null) => void;
+  setImportFileInfo: Dispatch<SetStateAction<FileInfo | null>>;
+  setStage: Dispatch<SetStateAction<Stage>>;
 }
 
-const FilePicker: React.FC<UploadFileProps> = ({onNext, importFileInfo, setImportFileInfo, importConfig}) => {
+const FilePicker = (props: FilePickerProps) => {
+  const {importConfig, importFileInfo, setImportFileInfo, setStage} = props;
   const [error, setError] = useState<string>('');
   const wasm = useWasmWorker();
+
+  const onNext = () => {
+    // TODO: If expectedHeaders are present (or) worksheet_data table contains delimiter rows, navigate to validate stage
+    // Else navigate to 'header' stage
+    setStage(importFileInfo?.headerRowId ? 'validate' : 'header');
+  }
 
   const removeFile = () => {
     setError('');
@@ -116,11 +126,13 @@ const FilePicker: React.FC<UploadFileProps> = ({onNext, importFileInfo, setImpor
       file,
     }
     if (ext === 'xlsx' && wasm) {
-      const worksheets = await wasm.fetchWorksheet(file, importConfig);
-      fileInfo.worksheets = worksheets.length > 1 ? worksheets : undefined;
-      fileInfo.worksheetId = worksheets[0]?.id;
+      const headerRow = await wasm.findHeaderRow(importConfig, file);
+      if (headerRow) {
+        fileInfo.worksheetId = headerRow.worksheetId;
+        fileInfo.headerRowId = headerRow.rowId;
+        fileInfo.actualHeaders = headerRow._rows;
+      }
     }
-    // TODO: Auto-select the header row if it's a first row.
     setImportFileInfo(fileInfo);
   }
 

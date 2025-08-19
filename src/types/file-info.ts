@@ -1,6 +1,21 @@
 export type Worksheet = {
-  id: string;
+  id: number;
   name: string;
+}
+
+export interface DataRow {
+  rowId: number;
+}
+
+export interface WorksheetPreview extends DataRow {
+  worksheetId: number;
+  rowData: string;
+  _rows?: string[];
+}
+
+export interface HeaderRow extends DataRow {
+  worksheetId: number;
+  [key: `C${number}`]: string;
 }
 
 export type FileInfo = {
@@ -8,6 +23,7 @@ export type FileInfo = {
   size: string;
   extension: string;
   file: File;
-  worksheets?: Worksheet[];
-  worksheetId?: string;
+  worksheetId?: number;
+  headerRowId?: number;
+  actualHeaders?: string[];
 };

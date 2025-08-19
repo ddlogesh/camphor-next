@@ -4,8 +4,15 @@ import {EmscriptenModule} from "@/src/types/emscripten-module";
 import {ImportConfig} from "@/src/types/import-config";
 import {Factory, SQLiteAPI} from "@/src/lib/excel-parser/sqlite-api";
 import {AccessHandlePoolVFS} from "@/src/lib/excel-parser/access-handle-pool-vfs";
-import {initReadDB, initWriteDB, readWorksheet} from "@/src/lib/excel-parser/database";
+import {
+  initReadDB,
+  initWriteDB,
+  listHeaderRows,
+  listWorksheetNames,
+  listWorksheetPreviews,
+} from "@/src/lib/excel-parser/database";
 import {getDatabaseFileName} from "@/src/lib/utils";
+import _ from "lodash";
 
 const FILE_DIRECTORY = '/upload';
 
@@ -23,7 +30,7 @@ export default class ExcelParser {
       this.wasm.imports[importConfig.id] ||= await this.initDatabase(importConfig);
   }
 
-  public async fetchWorksheet(file: File, importConfig: ImportConfig) {
+  public async findHeaderRow(importConfig: ImportConfig, file: File) {
     this.wasm ||= await this.getWasm(importConfig);
 
     const {id: importId} = importConfig;
@@ -45,11 +52,37 @@ export default class ExcelParser {
     FS.mount(WORKERFS, {files: [file]}, FILE_DIRECTORY);
     const result = this.wasm.loadWorksheet(`${FILE_DIRECTORY}/${file.name}`, getDatabaseFileName(importId));
     if (result) {
-      return await readWorksheet(sqlite, readDB);
-    } else {
+      const previews = await listHeaderRows(sqlite, readDB);
+      const importFields = importConfig.fields.map(field => field.id);
+      const matchingHeaders = previews.filter((preview) => (
+        _.isEmpty(_.difference(importFields, preview._rows!))
+      ));
+      return matchingHeaders.length === 1 ? matchingHeaders[0] : null;
+    } else
       console.error('Unable to fetch worksheet');
-      return [];
-    }
+
+    return null;
+  }
+
+  public async fetchWorksheets(importConfig: ImportConfig) {
+    this.wasm ||= await this.getWasm(importConfig);
+
+    const {id: importId} = importConfig;
+    const {sqlite, imports} = this.wasm;
+    const {readDB} = imports[importId];
+
+    const worksheets = await listWorksheetNames(sqlite, readDB);
+    return worksheets.length > 1 ? worksheets : null;
+  }
+
+  public async fetchWorksheetPreviews(importConfig: ImportConfig, worksheetId: number) {
+    this.wasm ||= await this.getWasm(importConfig);
+
+    const {id: importId} = importConfig;
+    const {sqlite, imports} = this.wasm;
+    const {readDB} = imports[importId];
+
+    return await listWorksheetPreviews(sqlite, readDB, worksheetId);
   }
 
   public async close() {
@@ -102,7 +135,6 @@ export default class ExcelParser {
     const writeDB = await initWriteDB(sqlite, importConfig);
     const readDB = await initReadDB(sqlite, importConfig);
 
-    console.log(`DB initialized for ${importId}`);
     return {
       writeDB,
       readDB,
