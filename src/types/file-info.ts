@@ -25,6 +25,6 @@ export type FileInfo = {
   file: File;
   worksheetId?: number;
   headerRowId?: number;
-  actualHeaders?: Set<string>;
+  actualHeaders?: string[];
   columnMapping?: Record<string, string>;
 };

@@ -126,11 +126,25 @@ const FilePicker = (props: FilePickerProps) => {
       file,
     }
     if (ext === 'xlsx' && wasm) {
-      const headerRow = await wasm.findHeaderRow(importConfig, file);
-      if (headerRow) {
+      const headers = await wasm.parseExcel(importConfig, file);
+      if (!headers) {
+        setError('Unable to parse Excel file');
+        return;
+      }
+
+      const importFields = importConfig.fields.map(field => field.id);
+      const matchingHeaders = headers.filter((header) => (
+        _.isEmpty(_.difference(importFields, header._rows!))
+      ));
+      if (matchingHeaders.length === 1) {
+        const headerRow = matchingHeaders[0];
         fileInfo.worksheetId = headerRow.worksheetId;
         fileInfo.headerRowId = headerRow.rowId;
-        fileInfo.actualHeaders = new Set(normalizeDupFields(headerRow._rows));
+        fileInfo.actualHeaders = normalizeDupFields(headerRow._rows);
+
+        const columnMap: Record<string, string> = {};
+        for (const field of importFields) columnMap[field] = field;
+        fileInfo.columnMapping = columnMap;
       }
     }
     setImportFileInfo(fileInfo);

@@ -31,40 +31,66 @@ const DataImporter = (props: DataImporterProps) => {
   useEffect(() => {
     if (!wasm) return;
 
-    (async () => await wasm.loadWasm(importConfig) )();
+    (async () => await wasm.loadWasm(importConfig))();
   }, [wasm, importConfig]);
 
-  return (
-    <div>
-      {stage === 'upload' && (
+  const isValidStage = () => {
+    const {file, worksheetId, headerRowId, actualHeaders = [], columnMapping = {}} = importFileInfo || {};
+
+    switch (stage) {
+      case 'upload':
+        return true;
+      case 'header':
+        return file || headerRowId;
+      case 'map':
+        return actualHeaders.length >= importColumns.length;
+      case 'validate':
+        return worksheetId && headerRowId && Object.keys(columnMapping).length == importColumns.length;
+    }
+    return false;
+  }
+
+  const render = () => {
+    if (stage === 'upload' || !isValidStage()) {
+      return (
         <FilePicker
           importConfig={importConfig}
           importFileInfo={importFileInfo}
           setImportFileInfo={setImportFileInfo}
           setStage={setStage}
         />
-      )}
-      {stage === 'header' && importFileInfo && (
-        <SelectHeader
-          importConfig={importConfig}
-          importFileInfo={importFileInfo}
-          setImportFileInfo={setImportFileInfo}
-          setStage={setStage}
-        />
-      )}
-      {stage === 'map' && importFileInfo && (
-        <MapColumn
-          importConfig={importConfig}
-          importFileInfo={importFileInfo}
-          setImportFileInfo={setImportFileInfo}
-          setStage={setStage}
-        />
-      )}
-      {stage === 'validate' && importFileInfo && (
-        <h1>Review Contents {importFileInfo.worksheetId}</h1>
-      )}
-    </div>
-  );
-};
+      );
+    }
+
+    switch (stage) {
+      case 'header':
+        return (
+          <SelectHeader
+            importConfig={importConfig}
+            importFileInfo={importFileInfo as FileInfo}
+            setImportFileInfo={setImportFileInfo}
+            setStage={setStage}
+          />
+        );
+      case 'map':
+        return (
+          <MapColumn
+            importConfig={importConfig}
+            importFileInfo={importFileInfo as FileInfo}
+            setImportFileInfo={setImportFileInfo}
+            setStage={setStage}
+          />
+        );
+      case 'validate':
+        return (
+          <h1>Review Contents {importFileInfo?.worksheetId}</h1>
+        );
+    }
+  }
+
+  return (
+    <div>{render()}</div>
+  )
+}
 
 export default DataImporter;

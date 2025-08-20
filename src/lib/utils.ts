@@ -31,17 +31,10 @@ const normalizeDupFields = (fields: string[]): string[] => {
   });
 }
 
-const setToMap = (fields: Set<string>) => {
-  const map: Record<string, string> = {};
-  for (const field of fields) map[field] = field;
-  return map;
-}
-
 export {
   toPlural,
   parseJSON,
   cn,
   getDatabaseFileName,
   normalizeDupFields,
-  setToMap,
 };
