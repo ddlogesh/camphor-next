@@ -21,6 +21,9 @@ const DataImporter = (props: DataImporterProps) => {
   const importConfig = appConfig.imports.find(i => i.id === importId);
   if (!importConfig) throw new ImporterError('Invalid Import ID');
 
+  const importColumns = importConfig.fields.map((field) => field.id);
+  if (importColumns.length !== new Set(importColumns).size) throw new ImporterError('Duplicate Import Field ID found');
+
   const [stage, setStage] = useState<Stage>('upload');
   const [importFileInfo, setImportFileInfo] = useState<FileInfo | null>(null);
   const wasm = useWasmWorker();

@@ -19,7 +19,7 @@ import {saveAs} from 'file-saver';
 import _ from 'lodash';
 import * as XLSX from 'xlsx';
 import appConfig from "@/src/lib/config";
-import {parseJSON, toPlural} from "@/src/lib/utils";
+import {normalizeDupFields, parseJSON, toPlural} from "@/src/lib/utils";
 import {fetchSampleData} from "@/src/lib/fakedata";
 import {ImportConfig} from "@/src/types/import-config";
 import {FileInfo} from "@/src/types/file-info";
@@ -130,7 +130,7 @@ const FilePicker = (props: FilePickerProps) => {
       if (headerRow) {
         fileInfo.worksheetId = headerRow.worksheetId;
         fileInfo.headerRowId = headerRow.rowId;
-        fileInfo.actualHeaders = headerRow._rows;
+        fileInfo.actualHeaders = new Set(normalizeDupFields(headerRow._rows));
       }
     }
     setImportFileInfo(fileInfo);

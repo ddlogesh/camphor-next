@@ -7,6 +7,7 @@ import {ImportConfig} from "@/src/types/import-config";
 import {Stage} from "@/src/types/global";
 import {ColumnDefinition} from "tabulator-tables";
 import {useWasmWorker} from "@/src/contexts/wasm-worker";
+import {normalizeDupFields} from "@/src/lib/utils";
 import {
   Select,
   SelectContent,
@@ -78,7 +79,7 @@ const SelectHeader = (props: SelectHeaderProps) => {
       ...prev as FileInfo,
       worksheetId,
       headerRowId,
-      actualHeaders: Object.values(fields),
+      actualHeaders: new Set(normalizeDupFields(Object.values(fields))),
     }));
     setStage('map');
   }
