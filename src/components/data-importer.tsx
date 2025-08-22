@@ -43,7 +43,7 @@ const DataImporter = (props: DataImporterProps) => {
       case 'header':
         return file || headerRowId;
       case 'map':
-        return actualHeaders.length >= importColumns.length;
+        return actualHeaders.length > 0;
       case 'validate':
         return worksheetId && headerRowId && Object.keys(columnMapping).length == importColumns.length;
     }

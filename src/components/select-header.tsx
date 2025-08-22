@@ -59,10 +59,10 @@ const SelectHeader = (props: SelectHeaderProps) => {
     } )();
   }, [wasm, importConfig]);
 
-  const loadRows = useCallback((_options: DataTableCallbackOptions<HeaderRow>) => {
+  const loadRows = useCallback((options: DataTableCallbackOptions<HeaderRow>) => {
     if (!wasm) return Promise.resolve([]);
 
-    return wasm.fetchWorksheetPreviews(importConfig, worksheetIdRef.current);
+    return wasm.fetchWorksheetPreviews(importConfig, worksheetIdRef.current, options);
   }, [wasm, importConfig]);
 
   const onNext = () => {
@@ -73,11 +73,17 @@ const SelectHeader = (props: SelectHeaderProps) => {
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const {worksheetId, rowId: headerRowId, C0, ...fields} = selectedRow;
+    const actualHeaders = normalizeDupFields(Object.values(fields));
+    if (actualHeaders.length === 0) {
+      alert("Header row can't be empty");
+      return;
+    }
+
     setImportFileInfo((prev) => ({
       ...prev as FileInfo,
       worksheetId,
       headerRowId,
-      actualHeaders: normalizeDupFields(Object.values(fields)),
+      actualHeaders,
     }));
     setStage('map');
   }

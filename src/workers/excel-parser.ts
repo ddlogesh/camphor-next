@@ -2,8 +2,10 @@ import * as Comlink from "comlink";
 import ExcelParserModule from "@/public/wasm/excel-parser";
 import {EmscriptenModule} from "@/src/types/emscripten-module";
 import {ImportConfig} from "@/src/types/import-config";
+import {HeaderRow} from "@/src/types/file-info";
 import {Factory, SQLiteAPI} from "@/src/lib/excel-parser/sqlite-api";
 import {AccessHandlePoolVFS} from "@/src/lib/excel-parser/access-handle-pool-vfs";
+import {DataTableCallbackOptions} from "@/src/components/data-table";
 import {
   initReadDB,
   initWriteDB,
@@ -12,7 +14,6 @@ import {
   listWorksheetPreviews,
 } from "@/src/lib/excel-parser/database";
 import {getDatabaseFileName} from "@/src/lib/utils";
-import _ from "lodash";
 
 const FILE_DIRECTORY = '/upload';
 
@@ -67,14 +68,14 @@ export default class ExcelParser {
     return await listWorksheetNames(sqlite, readDB);
   }
 
-  public async fetchWorksheetPreviews(importConfig: ImportConfig, worksheetId: number) {
+  public async fetchWorksheetPreviews(importConfig: ImportConfig, sheetId: number, options: DataTableCallbackOptions<HeaderRow>) {
     this.wasm ||= await this.getWasm(importConfig);
 
     const {id: importId} = importConfig;
     const {sqlite, imports} = this.wasm;
     const {readDB} = imports[importId] || {};
 
-    return await listWorksheetPreviews(sqlite, readDB, worksheetId);
+    return await listWorksheetPreviews(sqlite, readDB, {sheetId, rowId: options.lastRow?.rowId});
   }
 
   public async close() {
