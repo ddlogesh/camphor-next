@@ -31,6 +31,9 @@ const DataImporter = (props: DataImporterProps) => {
   useEffect(() => {
     if (!wasm) return;
 
+    // TODO: If file not found but worksheet_data table contains delimiter rows,
+    // if (!importFileInfo?.file && delimiterRow()) setStage('validate');
+
     (async () => await wasm.loadWasm(importConfig))();
   }, [wasm, importConfig]);
 
@@ -43,7 +46,7 @@ const DataImporter = (props: DataImporterProps) => {
       case 'header':
         return file || headerRowId;
       case 'map':
-        return actualHeaders.length >= importColumns.length;
+        return actualHeaders.length > 0;
       case 'validate':
         return worksheetId && headerRowId && Object.keys(columnMapping).length == importColumns.length;
     }

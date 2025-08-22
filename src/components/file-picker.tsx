@@ -58,11 +58,7 @@ const FilePicker = (props: FilePickerProps) => {
   const [error, setError] = useState<string>('');
   const wasm = useWasmWorker();
 
-  const onNext = () => {
-    // TODO: If expectedHeaders are present (or) worksheet_data table contains delimiter rows, navigate to validate stage
-    // Else navigate to 'header' stage
-    setStage(importFileInfo?.headerRowId ? 'validate' : 'header');
-  }
+  const onNext = () => setStage(importFileInfo?.headerRowId ? 'validate' : 'header');
 
   const removeFile = () => {
     setError('');
@@ -134,7 +130,7 @@ const FilePicker = (props: FilePickerProps) => {
 
       const importFields = importConfig.fields.map(field => field.id);
       const matchingHeaders = headers.filter((header) => (
-        _.isEmpty(_.difference(importFields, header._rows!))
+        _.isEmpty(_.differenceBy(importFields, header._rows, _.toLower))
       ));
       if (matchingHeaders.length === 1) {
         const headerRow = matchingHeaders[0];
@@ -143,7 +139,7 @@ const FilePicker = (props: FilePickerProps) => {
         fileInfo.actualHeaders = normalizeDupFields(headerRow._rows);
 
         const columnMap: Record<string, string> = {};
-        for (const field of importFields) columnMap[field] = field;
+        for (const field of importFields) columnMap[field.toLowerCase()] = field;
         fileInfo.columnMapping = columnMap;
       }
     }

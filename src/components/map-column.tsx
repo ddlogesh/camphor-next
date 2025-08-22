@@ -22,9 +22,9 @@ const MapColumn = (props: MapColumnProps) => {
   );
   const [selectedFields, setSelectedFields] = useState<Record<string, string>>(
     () => {
-      const matchingFields = _.intersection(importFileInfo.actualHeaders, expectedFields);
+      const matchingFields = _.intersectionBy(importFileInfo.actualHeaders!, expectedFields, _.toLower);
       const fieldMap: Record<string, string> = {};
-      for (const field of matchingFields) fieldMap[field] = field;
+      for (const field of matchingFields) fieldMap[field.toLowerCase()] = field;
       return fieldMap;
     }
   );
@@ -36,10 +36,10 @@ const MapColumn = (props: MapColumnProps) => {
   const onMappingChange = (expectedField: string, selectedField: string) => {
     setSelectedFields(prev => {
       if (selectedField === '__clear__') {
-        const { [expectedField]: _, ...rest } = prev;
+        const {[expectedField.toLowerCase()]: _, ...rest} = prev;
         return rest;
       }
-      return { ...prev, [expectedField]: selectedField };
+      return {...prev, [expectedField.toLowerCase()]: selectedField};
     });
   }
   const allMapped = () => {
@@ -71,12 +71,13 @@ const MapColumn = (props: MapColumnProps) => {
             Expected Columns -&gt; Actual Columns
           </p>
           {expectedFields.map(expectedField => {
-            const selectedValue = selectedFields[expectedField] || "";
+            const selectedValue = selectedFields[expectedField.toLowerCase()] || "";
             return (
               <div key={expectedField} className="flex flex-row mb-6">
                 <p>{expectedField}</p>
                 <p className="px-4">-&gt;</p>
-                <Select value={selectedValue} onValueChange={(val) => onMappingChange(expectedField, val)}>
+                <Select value={selectedValue.toLowerCase()}
+                        onValueChange={(val) => onMappingChange(expectedField, val)}>
                   <SelectTrigger className="w-[180px]">
                     <SelectValue placeholder="Choose column"/>
                   </SelectTrigger>
@@ -86,7 +87,7 @@ const MapColumn = (props: MapColumnProps) => {
                         <SelectItem key="__clear__" value="__clear__">
                           <span className="text-gray-400">Choose column</span>
                         </SelectItem>
-                        <SelectItem key={selectedValue} value={selectedValue}>{selectedValue}</SelectItem>
+                        <SelectItem key={selectedValue} value={selectedValue.toLowerCase()}>{selectedValue}</SelectItem>
                       </>
                     )}
                     {availableFields.map(availableField => (

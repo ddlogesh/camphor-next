@@ -37,7 +37,8 @@ export const createWorksheetDataTable = (fields: ImportField[]) => {
 }
 
 export const readWorksheet = `SELECT id, name FROM worksheets ORDER BY id ASC LIMIT ${LIMIT_SHEETS}`;
-export const readWorksheetPreview = ({sheetId = -1, rowId = -1, limit = LIMIT_ROWS} = {}) => {
+export const readWorksheetPreview = (options: {sheetId?: number, rowId?: number, limit?: number}) => {
+  const {sheetId = -1, rowId = -1, limit = LIMIT_ROWS} = options;
   let query = `SELECT worksheet_id, row_id, row_data FROM worksheet_preview `;
   if (sheetId > 0) {
     query += `WHERE worksheet_id = ${sheetId} `;

@@ -98,17 +98,12 @@ const fetchSampleData = (importConfig: ImportConfig, options: ImportFieldOptions
     const row: Record<string, unknown> = {};
 
     for (const field of importConfig.fields || []) {
-      if (field.multi) {
-        row[field.id] = Array.from({ length: 3 }).map(() => {
-          return generateFieldValue(field, options);
-        });
-      } else {
-        row[field.id] = generateFieldValue(field, options);
-      }
-
-      if (options.serializeObject && (field.multi || field.type === 'object')) {
-        row[field.id] = JSON.stringify(row[field.id]);
-      }
+      const { id, type, multi } = field;
+      row[id] = multi
+        ? Array.from({ length: 3 }).map(() => generateFieldValue(field, options))
+        : generateFieldValue(field, options);
+      if (options.serializeObject && (multi || type === 'object'))
+        row[id] = JSON.stringify(row[id]);
     }
     data.push(row);
   }
