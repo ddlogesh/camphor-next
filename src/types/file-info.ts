@@ -10,7 +10,7 @@ export interface DataRow {
 export interface WorksheetPreview extends DataRow {
   worksheetId: number;
   rowData: string;
-  _rows?: string[];
+  _rows: string[];
 }
 
 export interface HeaderRow extends DataRow {
@@ -26,4 +26,5 @@ export type FileInfo = {
   worksheetId?: number;
   headerRowId?: number;
   actualHeaders?: string[];
+  columnMapping?: Record<string, string>;
 };

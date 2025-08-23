@@ -31,6 +31,8 @@ const initWriteDB = async (sqlite: SQLiteAPI, importConfig: ImportConfig) => {
 
 const listWorksheetNames = async (sqlite: SQLiteAPI, db: number) => {
   const worksheets: Worksheet[] = [];
+  if (!db) return worksheets;
+
   await sqlite.exec(db, SQLiteQuery.readWorksheet, (row) => {
     worksheets.push({
       id: row[0] as number,
@@ -42,7 +44,10 @@ const listWorksheetNames = async (sqlite: SQLiteAPI, db: number) => {
 
 const listHeaderRows = async (sqlite: SQLiteAPI, db: number) => {
   const previews: WorksheetPreview[] = [];
-  await sqlite.exec(db, SQLiteQuery.readWorksheetPreview({rowId: 1, limit: SQLiteQuery.LIMIT_SHEETS}), (row) => {
+  if (!db) return previews;
+
+  const options = {rowId: 1, limit: SQLiteQuery.LIMIT_SHEETS};
+  await sqlite.exec(db, SQLiteQuery.readWorksheetPreview(options), (row) => {
     const rowData = row[2] as string;
     previews.push({
       worksheetId: row[0] as number,
@@ -54,9 +59,12 @@ const listHeaderRows = async (sqlite: SQLiteAPI, db: number) => {
   return previews;
 }
 
-const listWorksheetPreviews = async (sqlite: SQLiteAPI, db: number, sheetId: number) => {
+const listWorksheetPreviews = async (sqlite: SQLiteAPI, db: number, options: {sheetId?: number, rowId?: number, limit?: number}) => {
   const headers: HeaderRow[] = [];
-  await sqlite.exec(db, SQLiteQuery.readWorksheetPreview({sheetId, limit: SQLiteQuery.LIMIT_ROWS}), (row) => {
+  if (!db) return headers;
+
+  options.limit ||= SQLiteQuery.LIMIT_ROWS;
+  await sqlite.exec(db, SQLiteQuery.readWorksheetPreview(options), (row) => {
     const worksheetId = row[0] as number;
     const rowId = row[1] as number;
     const cells: HeaderRow = {

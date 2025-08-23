@@ -7,6 +7,7 @@ import {ImportConfig} from "@/src/types/import-config";
 import {Stage} from "@/src/types/global";
 import {ColumnDefinition} from "tabulator-tables";
 import {useWasmWorker} from "@/src/contexts/wasm-worker";
+import {normalizeDupFields} from "@/src/lib/utils";
 import {
   Select,
   SelectContent,
@@ -17,15 +18,15 @@ import {
 
 type SelectHeaderProps = {
   importConfig: ImportConfig;
-  importFileInfo: FileInfo | null;
+  importFileInfo: FileInfo;
   setImportFileInfo: Dispatch<SetStateAction<FileInfo | null>>;
   setStage: Dispatch<SetStateAction<Stage>>;
 };
 
 const SelectHeader = (props: SelectHeaderProps) => {
   const {importConfig, importFileInfo, setImportFileInfo, setStage} = props;
-  const [worksheets, setWorksheets] = useState<Worksheet[] | null>(null);
-  const [worksheetId, setWorksheetId] = useState<number>(importFileInfo?.worksheetId ?? 1);
+  const [worksheets, setWorksheets] = useState<Worksheet[]>([]);
+  const [worksheetId, setWorksheetId] = useState<number>(importFileInfo.worksheetId ?? 1);
   const [selectedRow, setSelectedRow] = useState<HeaderRow | null>( null);
   const worksheetIdRef = useRef(worksheetId);
   const wasm = useWasmWorker();
@@ -37,8 +38,6 @@ const SelectHeader = (props: SelectHeaderProps) => {
     {field: 'C0', title: 'C0', formatter: 'rowSelection', resizable: false, frozen: true, hozAlign: 'center'},
   ], []);
   const selectRow = useMemo(() => {
-    if (!importFileInfo) return;
-
     const {worksheetId, headerRowId} = importFileInfo;
     if (!worksheetId || !headerRowId) return;
 
@@ -60,10 +59,10 @@ const SelectHeader = (props: SelectHeaderProps) => {
     } )();
   }, [wasm, importConfig]);
 
-  const loadRows = useCallback((_options: DataTableCallbackOptions<HeaderRow>) => {
+  const loadRows = useCallback((options: DataTableCallbackOptions<HeaderRow>) => {
     if (!wasm) return Promise.resolve([]);
 
-    return wasm.fetchWorksheetPreviews(importConfig, worksheetIdRef.current);
+    return wasm.fetchWorksheetPreviews(importConfig, worksheetIdRef.current, options);
   }, [wasm, importConfig]);
 
   const onNext = () => {
@@ -74,11 +73,17 @@ const SelectHeader = (props: SelectHeaderProps) => {
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const {worksheetId, rowId: headerRowId, C0, ...fields} = selectedRow;
+    const actualHeaders = normalizeDupFields(Object.values(fields));
+    if (actualHeaders.length === 0) {
+      alert("Header row can't be empty");
+      return;
+    }
+
     setImportFileInfo((prev) => ({
       ...prev as FileInfo,
       worksheetId,
       headerRowId,
-      actualHeaders: Object.values(fields),
+      actualHeaders,
     }));
     setStage('map');
   }
@@ -93,7 +98,7 @@ const SelectHeader = (props: SelectHeaderProps) => {
       <p className="text-sm text-gray-600">
         Choose the header row present in your worksheet
       </p>
-      {worksheets &&
+      {worksheets.length > 1 &&
         <Select value={worksheetId.toString()} onValueChange={onSheetChange}>
           <SelectTrigger className="w-[180px]">
             <SelectValue placeholder="Worksheets"/>

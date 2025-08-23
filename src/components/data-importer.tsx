@@ -21,6 +21,9 @@ const DataImporter = (props: DataImporterProps) => {
   const importConfig = appConfig.imports.find(i => i.id === importId);
   if (!importConfig) throw new ImporterError('Invalid Import ID');
 
+  const importColumns = importConfig.fields.map((field) => field.id);
+  if (importColumns.length !== new Set(importColumns).size) throw new ImporterError('Duplicate Import Field ID found');
+
   const [stage, setStage] = useState<Stage>('upload');
   const [importFileInfo, setImportFileInfo] = useState<FileInfo | null>(null);
   const wasm = useWasmWorker();
@@ -28,40 +31,69 @@ const DataImporter = (props: DataImporterProps) => {
   useEffect(() => {
     if (!wasm) return;
 
-    (async () => await wasm.loadWasm(importConfig) )();
+    // TODO: If file not found but worksheet_data table contains delimiter rows,
+    // if (!importFileInfo?.file && delimiterRow()) setStage('validate');
+
+    (async () => await wasm.loadWasm(importConfig))();
   }, [wasm, importConfig]);
 
-  return (
-    <div>
-      {stage === 'upload' && (
+  const isValidStage = () => {
+    const {file, worksheetId, headerRowId, actualHeaders = [], columnMapping = {}} = importFileInfo || {};
+
+    switch (stage) {
+      case 'upload':
+        return true;
+      case 'header':
+        return file || headerRowId;
+      case 'map':
+        return actualHeaders.length > 0;
+      case 'validate':
+        return worksheetId && headerRowId && Object.keys(columnMapping).length == importColumns.length;
+    }
+    return false;
+  }
+
+  const render = () => {
+    if (stage === 'upload' || !isValidStage()) {
+      return (
         <FilePicker
           importConfig={importConfig}
           importFileInfo={importFileInfo}
           setImportFileInfo={setImportFileInfo}
           setStage={setStage}
         />
-      )}
-      {stage === 'header' && importFileInfo && (
-        <SelectHeader
-          importConfig={importConfig}
-          importFileInfo={importFileInfo}
-          setImportFileInfo={setImportFileInfo}
-          setStage={setStage}
-        />
-      )}
-      {stage === 'map' && importFileInfo && (
-        <MapColumn
-          importConfig={importConfig}
-          importFileInfo={importFileInfo}
-          setImportFileInfo={setImportFileInfo}
-          setStage={setStage}
-        />
-      )}
-      {stage === 'validate' && importFileInfo && (
-        <h1>Review Contents {importFileInfo.worksheetId}</h1>
-      )}
-    </div>
-  );
-};
+      );
+    }
+
+    switch (stage) {
+      case 'header':
+        return (
+          <SelectHeader
+            importConfig={importConfig}
+            importFileInfo={importFileInfo as FileInfo}
+            setImportFileInfo={setImportFileInfo}
+            setStage={setStage}
+          />
+        );
+      case 'map':
+        return (
+          <MapColumn
+            importConfig={importConfig}
+            importFileInfo={importFileInfo as FileInfo}
+            setImportFileInfo={setImportFileInfo}
+            setStage={setStage}
+          />
+        );
+      case 'validate':
+        return (
+          <h1>Review Contents {importFileInfo?.worksheetId}</h1>
+        );
+    }
+  }
+
+  return (
+    <div>{render()}</div>
+  )
+}
 
 export default DataImporter;

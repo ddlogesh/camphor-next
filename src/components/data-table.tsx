@@ -59,7 +59,7 @@ const DataTable = <T extends DataRow, >(props: DataTableProps<T>) => {
     }
   }, [columns, selectable]);
 
-  const scrollAndSelectRow = useCallback(() => {
+  const scrollRow = useCallback(async () => {
     if (!selectRow || !tableInstance.current) return;
 
     // Rewriting findRow implementation to avoid console warnings for invalid row index
@@ -67,7 +67,7 @@ const DataTable = <T extends DataRow, >(props: DataTableProps<T>) => {
     if (!rawRow) return;
 
     const row: RowComponent = rawRow.getComponent();
-    row.scrollTo('nearest').then(() => row.select());
+    await row.scrollTo('nearest');
   }, [selectRow]);
 
   const ajaxRequestFunc = useCallback(async (_url: string, _config: unknown, params: Record<string, number>) => {
@@ -81,6 +81,7 @@ const DataTable = <T extends DataRow, >(props: DataTableProps<T>) => {
         last_page: cached.length === LIMIT_ROWS ? page + 1 : page,
       };
     }
+
     const lastRow = prevPage > 0 ? lastRowMap.current[prevPage] ?? null : null;
     const rows = await callback({lastRow});
     pageCache.current.set(page, rows);
@@ -95,15 +96,19 @@ const DataTable = <T extends DataRow, >(props: DataTableProps<T>) => {
     };
   }, [callback, hideHeader, defineColumns]);
 
+  const rowFormatter = useCallback((row: RowComponent) => {
+    if (row.getIndex() === selectRow && !row.isSelected()) row.select();
+  }, [selectRow]);
+
   useEffect(() => {
     if (!tableInstance.current) return;
 
     if (metadata.worksheetId) {
       pageCache.current.clear();
       lastRowMap.current = {};
-      tableInstance.current.setData().then(() => scrollAndSelectRow());
+      tableInstance.current.setData().then(() => scrollRow());
     }
-  }, [metadata, scrollAndSelectRow]);
+  }, [metadata, scrollRow]);
 
   useEffect(() => {
     if (!tableRef.current) return;
@@ -111,6 +116,7 @@ const DataTable = <T extends DataRow, >(props: DataTableProps<T>) => {
     const options: Options = {
       height,
       columns,
+      rowFormatter,
       ajaxRequestFunc,
       ajaxURL: 'any',
       index: rowIndex,
@@ -125,9 +131,8 @@ const DataTable = <T extends DataRow, >(props: DataTableProps<T>) => {
     tableInstance.current = table;
     const cache = pageCache.current;
 
-    table.on('rowSelected', (row) => setSelectedRow?.(row.getData() as T));
-    table.on('rowDeselected', (_row) => setSelectedRow?.(null));
-    table.on('tableBuilt', () => scrollAndSelectRow());
+    table.on('rowSelectionChanged', (rows: T[]) => setSelectedRow?.(rows[0]));
+    table.on('tableBuilt', () => scrollRow());
 
     return () => {
       try {
@@ -138,7 +143,7 @@ const DataTable = <T extends DataRow, >(props: DataTableProps<T>) => {
         cache.clear();
       }
     };
-  }, [ajaxRequestFunc, columns, height, hideHeader, setSelectedRow, selectable, rowIndex, scrollAndSelectRow]);
+  }, [ajaxRequestFunc, columns, height, hideHeader, setSelectedRow, selectable, rowIndex, scrollRow, rowFormatter]);
 
   return (
     <div style={{height, overflow: 'auto'}}>

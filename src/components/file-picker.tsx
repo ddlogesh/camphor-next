@@ -19,7 +19,7 @@ import {saveAs} from 'file-saver';
 import _ from 'lodash';
 import * as XLSX from 'xlsx';
 import appConfig from "@/src/lib/config";
-import {parseJSON, toPlural} from "@/src/lib/utils";
+import {normalizeDupFields, parseJSON, toPlural} from "@/src/lib/utils";
 import {fetchSampleData} from "@/src/lib/fakedata";
 import {ImportConfig} from "@/src/types/import-config";
 import {FileInfo} from "@/src/types/file-info";
@@ -58,11 +58,7 @@ const FilePicker = (props: FilePickerProps) => {
   const [error, setError] = useState<string>('');
   const wasm = useWasmWorker();
 
-  const onNext = () => {
-    // TODO: If expectedHeaders are present (or) worksheet_data table contains delimiter rows, navigate to validate stage
-    // Else navigate to 'header' stage
-    setStage(importFileInfo?.headerRowId ? 'validate' : 'header');
-  }
+  const onNext = () => setStage(importFileInfo?.headerRowId ? 'validate' : 'header');
 
   const removeFile = () => {
     setError('');
@@ -126,11 +122,25 @@ const FilePicker = (props: FilePickerProps) => {
       file,
     }
     if (ext === 'xlsx' && wasm) {
-      const headerRow = await wasm.findHeaderRow(importConfig, file);
-      if (headerRow) {
+      const headers = await wasm.parseExcel(importConfig, file);
+      if (!headers) {
+        setError('Unable to parse Excel file');
+        return;
+      }
+
+      const importFields = importConfig.fields.map(field => field.id);
+      const matchingHeaders = headers.filter((header) => (
+        _.isEmpty(_.differenceBy(importFields, header._rows, _.toLower))
+      ));
+      if (matchingHeaders.length === 1) {
+        const headerRow = matchingHeaders[0];
         fileInfo.worksheetId = headerRow.worksheetId;
         fileInfo.headerRowId = headerRow.rowId;
-        fileInfo.actualHeaders = headerRow._rows;
+        fileInfo.actualHeaders = normalizeDupFields(headerRow._rows);
+
+        const columnMap: Record<string, string> = {};
+        for (const field of importFields) columnMap[field.toLowerCase()] = field;
+        fileInfo.columnMapping = columnMap;
       }
     }
     setImportFileInfo(fileInfo);
