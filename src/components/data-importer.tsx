@@ -1,6 +1,6 @@
 "use client";
 
-import {useEffect, useState} from "react";
+import {useEffect, useMemo, useState} from "react";
 import FilePicker from "@/src/components/file-picker";
 import SelectHeader from "@/src/components/select-header";
 import MapColumn from "@/src/components/map-column";
@@ -21,8 +21,12 @@ const DataImporter = (props: DataImporterProps) => {
   const importConfig = appConfig.imports.find(i => i.id === importId);
   if (!importConfig) throw new ImporterError('Invalid Import ID');
 
-  const importColumns = importConfig.fields.map((field) => field.id);
+  const importColumns = importConfig.fields.map((field) => field.id.trim().toLowerCase());
   if (importColumns.length !== new Set(importColumns).size) throw new ImporterError('Duplicate Import Field ID found');
+
+  const requiredColumns = importConfig.fields
+    .filter(field => field.required)
+    .map(field => field.id.trim().toLowerCase());
 
   const [stage, setStage] = useState<Stage>('upload');
   const [importFileInfo, setImportFileInfo] = useState<FileInfo | null>(null);
@@ -34,27 +38,42 @@ const DataImporter = (props: DataImporterProps) => {
     // TODO: If file not found but worksheet_data table contains delimiter rows,
     // if (!importFileInfo?.file && delimiterRow()) setStage('validate');
 
-    (async () => await wasm.loadWasm(importConfig))();
+    wasm.loadWasm(importConfig);
   }, [wasm, importConfig]);
 
-  const isValidStage = () => {
-    const {file, worksheetId, headerRowId, actualHeaders = [], columnMapping = {}} = importFileInfo || {};
+  const isValidStage = useMemo(() => {
+    if (!importFileInfo) return false;
+    const {file, worksheetId, headerRowId, actualHeaders = [], columnMapping = {}} = importFileInfo;
 
     switch (stage) {
       case 'upload':
         return true;
       case 'header':
-        return file || headerRowId;
+        return Boolean(file || headerRowId);
       case 'map':
         return actualHeaders.length > 0;
       case 'validate':
-        return worksheetId && headerRowId && Object.keys(columnMapping).length == importColumns.length;
+        const valid = Boolean(worksheetId && headerRowId && Object.keys(columnMapping).length >= requiredColumns.length);
+        if (!valid) return false;
+
+        const actualMap: Record<string, number[]> = {};
+        importColumns.forEach((col, idx) => {
+          const actual = columnMapping[col];
+          if (actual) {
+            const actualLower = actual.trim().toLowerCase();
+            if (!actualMap[actualLower]) actualMap[actualLower] = [];
+            actualMap[actualLower].push(idx);
+          }
+        });
+        importFileInfo.columnPosition = actualHeaders.map(header => actualMap[header.trim().toLowerCase()] ?? []);
+        importFileInfo.columnTotal = importColumns.length;
+        return true;
     }
     return false;
-  }
+  }, [importFileInfo, stage, requiredColumns, importColumns]);
 
-  const render = () => {
-    if (stage === 'upload' || !isValidStage()) {
+  const renderContent = () => {
+    if (stage === 'upload' || !isValidStage) {
       return (
         <FilePicker
           importConfig={importConfig}
@@ -86,13 +105,17 @@ const DataImporter = (props: DataImporterProps) => {
         );
       case 'validate':
         return (
-          <h1>Review Contents {importFileInfo?.worksheetId}</h1>
+          <h1>Review Contents {JSON.stringify(importFileInfo?.columnMapping)} :: {JSON.stringify(importFileInfo?.columnPosition)}</h1>
+        );
+      default:
+        return (
+          <h3>Something went wrong :(</h3>
         );
     }
   }
 
   return (
-    <div>{render()}</div>
+    <div>{renderContent()}</div>
   )
 }
 

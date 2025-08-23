@@ -1,20 +1,15 @@
 "use client";
 
-import {useCallback, useEffect, useState, useRef, useMemo, Dispatch, SetStateAction} from "react";
+import {useCallback, useEffect, useState, useRef, useMemo, Dispatch, SetStateAction, memo} from "react";
+import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/src/components/ui/select"
 import DataTable, {DataTableCallbackOptions} from "@/src/components/data-table";
 import {FileInfo, Worksheet, HeaderRow} from "@/src/types/file-info";
 import {ImportConfig} from "@/src/types/import-config";
 import {Stage} from "@/src/types/global";
 import {ColumnDefinition} from "tabulator-tables";
 import {useWasmWorker} from "@/src/contexts/wasm-worker";
-import {normalizeDupFields} from "@/src/lib/utils";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/src/components/ui/select"
+import {nextStage} from "@/src/lib/utils";
+import {ImporterError} from "@/src/lib/exceptions/importer-error";
 
 type SelectHeaderProps = {
   importConfig: ImportConfig;
@@ -27,7 +22,8 @@ const SelectHeader = (props: SelectHeaderProps) => {
   const {importConfig, importFileInfo, setImportFileInfo, setStage} = props;
   const [worksheets, setWorksheets] = useState<Worksheet[]>([]);
   const [worksheetId, setWorksheetId] = useState<number>(importFileInfo.worksheetId ?? 1);
-  const [selectedRow, setSelectedRow] = useState<HeaderRow | null>( null);
+  const [selectedRow, setSelectedRow] = useState<HeaderRow | null>(null);
+  const [error, setError] = useState<string>('');
   const worksheetIdRef = useRef(worksheetId);
   const wasm = useWasmWorker();
 
@@ -48,6 +44,7 @@ const SelectHeader = (props: SelectHeaderProps) => {
     const id = parseInt(sheetId);
     setWorksheetId(id);
     worksheetIdRef.current = id;
+    setError('');
   }
 
   useEffect(() => {
@@ -56,8 +53,10 @@ const SelectHeader = (props: SelectHeaderProps) => {
 
       const sheets = await wasm.fetchWorksheets(importConfig);
       setWorksheets(sheets);
-    } )();
+    })();
   }, [wasm, importConfig]);
+
+  useEffect(() => setError(''), [selectedRow]);
 
   const loadRows = useCallback((options: DataTableCallbackOptions<HeaderRow>) => {
     if (!wasm) return Promise.resolve([]);
@@ -66,26 +65,24 @@ const SelectHeader = (props: SelectHeaderProps) => {
   }, [wasm, importConfig]);
 
   const onNext = () => {
-    if (!selectedRow) {
-      alert('Please select a header row');
-      return;
-    }
+    try {
+      if (!selectedRow) throw new ImporterError('Please select a header row');
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const {worksheetId, rowId: headerRowId, C0, ...fields} = selectedRow;
-    const actualHeaders = normalizeDupFields(Object.values(fields));
-    if (actualHeaders.length === 0) {
-      alert("Header row can't be empty");
-      return;
-    }
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const {worksheetId, rowId: headerRowId, C0, ...fields} = selectedRow;
+      const actualHeaders = Object.values(fields);
 
-    setImportFileInfo((prev) => ({
-      ...prev as FileInfo,
-      worksheetId,
-      headerRowId,
-      actualHeaders,
-    }));
-    setStage('map');
+      const stage = nextStage(importConfig.fields, actualHeaders);
+      setImportFileInfo((prev) => ({
+        ...prev as FileInfo,
+        worksheetId,
+        headerRowId,
+        actualHeaders,
+      }));
+      setStage(stage);
+    } catch (err) {
+      if (err instanceof ImporterError) setError(err.message);
+    }
   }
 
   const onBack = () => setStage('upload');
@@ -125,6 +122,9 @@ const SelectHeader = (props: SelectHeaderProps) => {
           />
         }
       </div>
+
+      {error && <p className="mt-6 text-red-600">{error}</p>}
+
       <div className="flex flex-row items-center mt-6 disabled:opacity-50">
         <button
           className="px-6 py-2 mr-4 bg-blue-600 text-white rounded hover:bg-blue-700"
@@ -135,7 +135,7 @@ const SelectHeader = (props: SelectHeaderProps) => {
         <button
           className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
           onClick={onNext}
-          disabled={!selectedRow}
+          disabled={!selectedRow || !!error}
         >
           Next
         </button>
@@ -144,4 +144,4 @@ const SelectHeader = (props: SelectHeaderProps) => {
   )
 };
 
-export default SelectHeader;
+export default memo(SelectHeader);

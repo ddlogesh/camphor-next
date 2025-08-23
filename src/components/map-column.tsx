@@ -1,11 +1,15 @@
 "use client";
 
-import {Dispatch, SetStateAction, useState, useMemo} from "react";
+import {Dispatch, SetStateAction, useState, useMemo, useCallback, memo} from "react";
 import {FileInfo} from "@/src/types/file-info";
 import {ImportConfig} from "@/src/types/import-config";
 import {Stage} from "@/src/types/global";
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/src/components/ui/select";
-import _ from 'lodash';
+
+type MappingState = {
+  selected: Record<string, string>;
+  available: Set<string>;
+};
 
 type MapColumnProps = {
   importConfig: ImportConfig;
@@ -16,41 +20,68 @@ type MapColumnProps = {
 
 const MapColumn = (props: MapColumnProps) => {
   const {importConfig, importFileInfo, setImportFileInfo, setStage} = props;
-  const expectedFields = useMemo(
-    () => importConfig.fields.map(field => field.id),
+
+  const expectedSet = useMemo(() =>
+    new Set(importConfig.fields.map(field => field.id.trim().toLowerCase())),
     [importConfig.fields]
   );
-  const [selectedFields, setSelectedFields] = useState<Record<string, string>>(
-    () => {
-      const matchingFields = _.intersectionBy(importFileInfo.actualHeaders!, expectedFields, _.toLower);
-      const fieldMap: Record<string, string> = {};
-      for (const field of matchingFields) fieldMap[field.toLowerCase()] = field;
-      return fieldMap;
-    }
-  );
-  const availableFields = useMemo(
-    () => _.difference(importFileInfo.actualHeaders, Object.values(selectedFields)),
-    [importFileInfo.actualHeaders, selectedFields]
+
+  const requiredFields = useMemo(() =>
+    new Set(importConfig.fields.filter(field => field.required).map(field => field.id.trim().toLowerCase())),
+    [importConfig.fields]
   );
 
-  const onMappingChange = (expectedField: string, selectedField: string) => {
-    setSelectedFields(prev => {
+  const [mapping, setMapping] = useState<MappingState>(() => {
+    const selected: Record<string, string> = {};
+    const available = new Set<string>();
+    const actualHeaders: string[] = importFileInfo.actualHeaders || [];
+
+    for (const actual of actualHeaders) {
+      const actualLower = actual.trim().toLowerCase();
+      if (!actualLower) continue;
+
+      if (!expectedSet.has(actualLower))
+        available.add(actual);
+      else if (!selected[actualLower])
+        selected[actualLower] = actual;
+    }
+    return {selected, available};
+  });
+
+  const onMappingChange = useCallback((expectedField: string, selectedField: string) => {
+    setMapping(prev => {
+      const selected = {...prev.selected};
+      const available = new Set(prev.available);
+      const actual = selected[expectedField];
+
       if (selectedField === '__clear__') {
-        const {[expectedField.toLowerCase()]: _, ...rest} = prev;
-        return rest;
+        if (actual) available.add(actual);
+        delete selected[expectedField];
+      } else {
+        if (actual && actual !== selectedField) available.add(actual);
+        available.delete(selectedField);
+        selected[expectedField] = selectedField;
       }
-      return {...prev, [expectedField.toLowerCase()]: selectedField};
+
+      return {selected, available};
     });
-  }
-  const allMapped = () => {
-    const values = Object.values(selectedFields);
-    return values.length === expectedFields.length && values.length === new Set(values).size;
-  }
+  }, []);
+
+  const availableFields = useMemo(() => Array.from(mapping.available), [mapping.available]);
+
+  const allMapped = useMemo(() => {
+    for (const field of requiredFields) {
+      if (!mapping.selected[field]) return false;
+    }
+    return true;
+  }, [mapping.selected, requiredFields]);
 
   const onNext = () => {
+    if (!allMapped) return;
+
     setImportFileInfo((prev) => ({
       ...prev as FileInfo,
-      columnMapping: selectedFields,
+      columnMapping: mapping.selected,
     }));
     setStage('validate');
   }
@@ -70,14 +101,14 @@ const MapColumn = (props: MapColumnProps) => {
           <p className="text-base font-semibold mb-6">
             Expected Columns -&gt; Actual Columns
           </p>
-          {expectedFields.map(expectedField => {
-            const selectedValue = selectedFields[expectedField.toLowerCase()] || "";
+          {importConfig.fields.map(field => {
+            const selectedValue = mapping.selected[field.id.toLowerCase()] || "";
             return (
-              <div key={expectedField} className="flex flex-row mb-6">
-                <p>{expectedField}</p>
+              <div key={field.id} className="flex flex-row mb-6">
+                <p>{field.label}</p>
                 <p className="px-4">-&gt;</p>
                 <Select value={selectedValue.toLowerCase()}
-                        onValueChange={(val) => onMappingChange(expectedField, val)}>
+                        onValueChange={(val) => onMappingChange(field.id.toLowerCase(), val)}>
                   <SelectTrigger className="w-[180px]">
                     <SelectValue placeholder="Choose column"/>
                   </SelectTrigger>
@@ -100,6 +131,7 @@ const MapColumn = (props: MapColumnProps) => {
           })}
         </div>
       </div>
+
       <div className="flex flex-row items-center mt-6 disabled:opacity-50">
         <button
           className="px-6 py-2 mr-4 bg-blue-600 text-white rounded hover:bg-blue-700"
@@ -110,13 +142,13 @@ const MapColumn = (props: MapColumnProps) => {
         <button
           className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
           onClick={onNext}
-          disabled={!allMapped()}
+          disabled={!allMapped}
         >
           Next
         </button>
       </div>
     </div>
   )
-};
+}
 
-export default MapColumn;
+export default memo(MapColumn);

@@ -21,3 +21,16 @@ npm run dev
 ```
 
 Open http://localhost:3000 with your browser to see the result.
+
+# Column Matching Rules
+
+* required mismatch count > unmapped actual count (FAIL)
+* required mismatch (map)
+* required match -> with optional missing (validate)
+* required match -> with optional mismatch (map)
+* Perfect match -> extra unknown (validate)
+* Perfect match (validate)
+
+required mismatch count > candidate count (throw error)
+required/optional mismatch with candidates (map)
+required/optional match without candidates (validate)

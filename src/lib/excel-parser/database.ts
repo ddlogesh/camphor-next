@@ -72,8 +72,8 @@ const listWorksheetPreviews = async (sqlite: SQLiteAPI, db: number, options: {sh
       rowId,
       C0: `${worksheetId}:${rowId}`,
     };
-    const rowData = row[2] as string;
-    rowData.split('\x1F').forEach((cell, i) => cells[`C${i + 1}`] = cell);
+    const rowCols = (row[2] as string).split('\x1F');
+    for (let i = 0; i < rowCols.length; i++) cells[`C${i + 1}`] = rowCols[i];
     headers.push(cells);
   });
   return headers;

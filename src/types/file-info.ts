@@ -27,4 +27,6 @@ export type FileInfo = {
   headerRowId?: number;
   actualHeaders?: string[];
   columnMapping?: Record<string, string>;
+  columnPosition?: number[][];
+  columnTotal?: number;
 };

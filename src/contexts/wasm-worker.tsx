@@ -3,7 +3,7 @@ import * as Comlink from "comlink";
 import {ExcelParserWorker} from "@/src/workers";
 import ExcelParser from "@/src/workers/excel-parser";
 
-type WorkerAPI = Comlink.Remote<ExcelParser>
+export type WorkerAPI = Comlink.Remote<ExcelParser>
 
 const WorkerContext = createContext<WorkerAPI | null>(null);
 

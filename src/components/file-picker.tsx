@@ -1,6 +1,6 @@
 "use client";
 
-import {useState, Dispatch, SetStateAction} from 'react';
+import {useState, Dispatch, SetStateAction, memo} from 'react';
 import {ErrorCode, FileRejection, useDropzone} from 'react-dropzone';
 import {
   DownloadIcon,
@@ -19,12 +19,13 @@ import {saveAs} from 'file-saver';
 import _ from 'lodash';
 import * as XLSX from 'xlsx';
 import appConfig from "@/src/lib/config";
-import {normalizeDupFields, parseJSON, toPlural} from "@/src/lib/utils";
+import {nextStage, parseJSON, toPlural} from "@/src/lib/utils";
 import {fetchSampleData} from "@/src/lib/fakedata";
 import {ImportConfig} from "@/src/types/import-config";
-import {FileInfo} from "@/src/types/file-info";
+import {FileInfo, WorksheetPreview} from "@/src/types/file-info";
 import {Stage} from "@/src/types/global";
-import {useWasmWorker} from "@/src/contexts/wasm-worker";
+import {useWasmWorker, WorkerAPI} from "@/src/contexts/wasm-worker";
+import {ImporterError} from "@/src/lib/exceptions/importer-error";
 
 const SUPPORTED_MIME_TYPES: { [key: string]: string } = {
   'csv': 'text/csv',
@@ -103,6 +104,28 @@ const FilePicker = (props: FilePickerProps) => {
     return result;
   };
 
+  const findHeaderRow = async (wasm: WorkerAPI | null, file: File) => {
+    if (!wasm) throw new ImporterError('Loading WASM...');
+
+    const headers = await wasm.parseExcel(importConfig, file);
+    if (!headers) throw new ImporterError('Unable to parse Excel file');
+
+    let validHeader: WorksheetPreview | null = null;
+    for (const header of headers) {
+      try {
+        const stage = nextStage(importConfig.fields, header._rows);
+        if (stage === 'validate') {
+          if (validHeader) return null; // More than one valid header found
+          validHeader = header;
+        }
+      } catch (err) {
+        // Ignore "Missing required fields" error
+        if (!(err instanceof ImporterError)) throw err;
+      }
+    }
+    return validHeader;
+  }
+
   const onDrop = async (acceptedFiles: File[], fileRejections: FileRejection[]) => {
     setError('');
     setImportFileInfo(null);
@@ -121,26 +144,22 @@ const FilePicker = (props: FilePickerProps) => {
       extension: ext || 'binary',
       file,
     }
-    if (ext === 'xlsx' && wasm) {
-      const headers = await wasm.parseExcel(importConfig, file);
-      if (!headers) {
-        setError('Unable to parse Excel file');
+    if (ext === 'xlsx') {
+      try {
+        const headerRow = await findHeaderRow(wasm, file);
+        if (headerRow) {
+          fileInfo.worksheetId = headerRow.worksheetId;
+          fileInfo.headerRowId = headerRow.rowId;
+          fileInfo.actualHeaders = headerRow._rows;
+
+          const importFields = importConfig.fields.map(field => field.id);
+          const columnMap: Record<string, string> = {};
+          for (const field of importFields) columnMap[field.toLowerCase()] = field;
+          fileInfo.columnMapping = columnMap;
+        }
+      } catch (err) {
+        if (err instanceof ImporterError) setError(err.message);
         return;
-      }
-
-      const importFields = importConfig.fields.map(field => field.id);
-      const matchingHeaders = headers.filter((header) => (
-        _.isEmpty(_.differenceBy(importFields, header._rows, _.toLower))
-      ));
-      if (matchingHeaders.length === 1) {
-        const headerRow = matchingHeaders[0];
-        fileInfo.worksheetId = headerRow.worksheetId;
-        fileInfo.headerRowId = headerRow.rowId;
-        fileInfo.actualHeaders = normalizeDupFields(headerRow._rows);
-
-        const columnMap: Record<string, string> = {};
-        for (const field of importFields) columnMap[field.toLowerCase()] = field;
-        fileInfo.columnMapping = columnMap;
       }
     }
     setImportFileInfo(fileInfo);
@@ -245,4 +264,4 @@ const FilePicker = (props: FilePickerProps) => {
   );
 };
 
-export default FilePicker;
+export default memo(FilePicker);

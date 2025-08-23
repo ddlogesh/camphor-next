@@ -1,5 +1,7 @@
 import {ImportField} from "@/src/types/import-config";
 
+type SQLiteFieldType = 'TEXT' | 'NUMERIC' | 'JSON';
+
 export const LIMIT_ROWS = 50;
 export const LIMIT_SHEETS = 200;
 
@@ -19,15 +21,14 @@ export const createWorksheetPreviewTable = `
 `;
 export const createWorksheetDataTable = (fields: ImportField[]) => {
   const columns = fields.map((field) => {
+    const {id, required, unique} = field;
     const type = getSQLiteFieldType(field);
     const constraints = [
-      field.required ? "NOT NULL" : "",
-      field.unique ? "UNIQUE" : "",
-    ]
-      .filter(Boolean)
-      .join(" ");
+      required ? "NOT NULL" : "", // Add DEFAULT NULL in else condition if prepared statement insertion fails
+      unique ? "UNIQUE" : "",
+    ].filter(Boolean).join(" ");
 
-    return `${field.id} ${type}${constraints ? " " + constraints : ""}`;
+    return `${id.toLowerCase()} ${type}${constraints ? " " + constraints : ""}`;
   });
   columns.unshift("row_id INTEGER PRIMARY KEY AUTOINCREMENT");
   columns.push("row_valid INTEGER NOT NULL DEFAULT 0");
@@ -51,10 +52,11 @@ export const countWorksheet = `SELECT COUNT(*) FROM worksheets`;
 export const countWorksheetPreview = `SELECT COUNT(*) FROM worksheet_preview`;
 export const countWorksheetData = `SELECT COUNT(*) FROM worksheet_data`;
 
-const getSQLiteFieldType = (field: ImportField) => {
-  if (field.multi || field.type === 'object') return 'JSON';
+const getSQLiteFieldType = (field: ImportField): SQLiteFieldType => {
+  const {type, multi} = field;
+  if (multi || type === 'object') return 'JSON';
 
-  switch (field.type) {
+  switch (type) {
     case 'string':
     case 'long_text':
     case 'datetime':
