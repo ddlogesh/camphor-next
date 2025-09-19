@@ -4,6 +4,7 @@ import {useEffect, useMemo, useState} from "react";
 import FilePicker from "@/src/components/file-picker";
 import SelectHeader from "@/src/components/select-header";
 import MapColumn from "@/src/components/map-column";
+import ReviewContent from "@/src/components/review-content";
 import {FileInfo} from "@/src/types/file-info";
 import {Stage} from "@/src/types/global";
 import appConfig from "@/src/lib/config";
@@ -105,8 +106,17 @@ const DataImporter = (props: DataImporterProps) => {
         );
       case 'validate':
         return (
-          <h1>Review Contents {JSON.stringify(importFileInfo?.columnMapping)} :: {JSON.stringify(importFileInfo?.columnPosition)}</h1>
+          <ReviewContent
+            importConfig={importConfig}
+            importFileInfo={importFileInfo as FileInfo}
+            setImportFileInfo={setImportFileInfo}
+            setStage={setStage}
+          />
         );
+      case 'submit':
+        return (
+          <h1>Uploading File</h1>
+        )
       default:
         return (
           <h3>Something went wrong :(</h3>
