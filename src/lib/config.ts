@@ -1,6 +1,7 @@
 const appConfig = {
   fileExtensions: ['csv', 'xlsx', 'json'],
   maxFileSizeMB: 2,
+  allowMultiMapping: false,
   imports: [
     {
       id: 'employees',

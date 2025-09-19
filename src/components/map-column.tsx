@@ -4,6 +4,7 @@ import {Dispatch, SetStateAction, useState, useMemo, useCallback, memo} from "re
 import {FileInfo} from "@/src/types/file-info";
 import {ImportConfig} from "@/src/types/import-config";
 import {Stage} from "@/src/types/global";
+import appConfig from "@/src/lib/config";
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/src/components/ui/select";
 
 type MappingState = {
@@ -67,7 +68,11 @@ const MapColumn = (props: MapColumnProps) => {
     });
   }, []);
 
-  const availableFields = useMemo(() => Array.from(mapping.available), [mapping.available]);
+  const availableFields = useMemo(() => {
+    if (!appConfig.allowMultiMapping) return Array.from(mapping.available);
+
+    return importFileInfo.actualHeaders!.filter((header) => header.trim().length > 0);
+  }, [mapping.available, importFileInfo.actualHeaders]);
 
   const allMapped = useMemo(() => {
     for (const field of requiredFields) {
@@ -102,24 +107,28 @@ const MapColumn = (props: MapColumnProps) => {
             Expected Columns -&gt; Actual Columns
           </p>
           {importConfig.fields.map(field => {
-            const selectedValue = mapping.selected[field.id.toLowerCase()] || "";
+            const fieldKey = field.id.toLowerCase();
+            const selectedValue = mapping.selected[fieldKey] || "";
+            const hasSelection = Boolean(selectedValue);
+            const uniqueSelection = hasSelection && !appConfig.allowMultiMapping;
+
             return (
               <div key={field.id} className="flex flex-row mb-6">
                 <p>{field.label}</p>
                 <p className="px-4">-&gt;</p>
-                <Select value={selectedValue.toLowerCase()}
-                        onValueChange={(val) => onMappingChange(field.id.toLowerCase(), val)}>
+                <Select value={selectedValue}
+                        onValueChange={(val) => onMappingChange(fieldKey, val)}>
                   <SelectTrigger className="w-[180px]">
                     <SelectValue placeholder="Choose column"/>
                   </SelectTrigger>
                   <SelectContent>
-                    {selectedValue && (
-                      <>
-                        <SelectItem key="__clear__" value="__clear__">
-                          <span className="text-gray-400">Choose column</span>
-                        </SelectItem>
-                        <SelectItem key={selectedValue} value={selectedValue.toLowerCase()}>{selectedValue}</SelectItem>
-                      </>
+                    {hasSelection && (
+                      <SelectItem key="__clear__" value="__clear__">
+                        <span className="text-gray-400">Choose column</span>
+                      </SelectItem>
+                    )}
+                    {uniqueSelection && (
+                      <SelectItem key={selectedValue} value={selectedValue}>{selectedValue}</SelectItem>
                     )}
                     {availableFields.map(availableField => (
                       <SelectItem key={availableField} value={availableField}>{availableField}</SelectItem>
